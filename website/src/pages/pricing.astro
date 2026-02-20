@@ -1,0 +1,84 @@
+---
+import Base from '../layouts/Base.astro'
+import Navbar from '../components/Navbar.astro'
+import PricingCard from '../components/PricingCard.astro'
+import Footer from '../components/Footer.astro'
+
+const tiers = [
+  {
+    name: 'Free',
+    subtitle: 'Get started with Solon',
+    price: '$0',
+    features: [
+      'Unlimited local inference',
+      'Unlimited API keys',
+      'Cloudflare Tunnel',
+      'Web dashboard',
+      'CLI tools',
+      'OpenClaw integration',
+    ],
+    cta: 'Download',
+  },
+  {
+    name: 'Pro',
+    subtitle: 'Stable remote access',
+    price: '$9',
+    per: '/mo',
+    features: [
+      'Everything in Free',
+      'Solon Relay (stable URL)',
+      'DDoS protection',
+      '100GB bandwidth',
+      'Priority support',
+    ],
+    cta: 'Get Pro',
+    featured: true,
+  },
+  {
+    name: 'Team',
+    subtitle: 'For small teams',
+    price: '$19',
+    per: '/mo',
+    features: [
+      'Everything in Pro',
+      'Multi-user access',
+      'Shared keys',
+      'Webhooks',
+      '500GB bandwidth',
+    ],
+    cta: 'Get Team',
+  },
+  {
+    name: 'Enterprise',
+    subtitle: 'For organizations',
+    price: '$49+',
+    per: '/mo',
+    features: [
+      'Everything in Team',
+      'SSO / SAML',
+      'SLA guarantee',
+      'Audit log export',
+      'Unlimited bandwidth',
+      'Dedicated relay',
+    ],
+    cta: 'Contact Sales',
+  },
+]
+---
+
+<Base title="Pricing — Solon">
+  <Navbar current="/pricing" />
+
+  <div class="max-w-6xl mx-auto px-6 pt-20 pb-32">
+    <h1 class="text-4xl font-extrabold text-center tracking-tight mb-3">Pricing</h1>
+    <p class="text-gray-500 text-center mb-16 max-w-lg mx-auto">Open-source core. Pay only for managed infrastructure.</p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {tiers.map(tier => (
+        <PricingCard {...tier} />
+      ))}
+    </div>
+  </div>
+
+  <Footer />
+</Base>

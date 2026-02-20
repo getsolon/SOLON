@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/Base.astro'
+import Navbar from '../../components/Navbar.astro'
+import CodeBlock from '../../components/CodeBlock.astro'
+import Footer from '../../components/Footer.astro'
+---
+
+<Base title="CLI Reference — Solon">
+  <Navbar current="/docs" />
+
+  <div class="max-w-4xl mx-auto px-6 pt-16 pb-32">
+    <div class="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-12">
+
+      {/* Sidebar */}
+      <aside class="text-sm">
+        <h4 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Getting Started</h4>
+        <a href="/docs" class="block py-1.5 text-gray-500 hover:text-gray-900">Quickstart</a>
+        <a href="/docs/api" class="block py-1.5 text-gray-500 hover:text-gray-900">API Reference</a>
+        <a href="/docs/cli" class="block py-1.5 text-gray-900 font-medium">CLI Reference</a>
+      </aside>
+
+      {/* Content */}
+      <div>
+        <h1 class="text-3xl font-bold tracking-tight mb-8">CLI Reference</h1>
+
+        <h2 class="text-xl font-semibold mt-8 mb-4">solon serve</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Start the Solon daemon. On first run, an admin API key is auto-created.</p>
+        <CodeBlock code={`solon serve              # Start on default port 8420
+solon serve --port 9000  # Start on custom port`} />
+
+        <h2 class="text-xl font-semibold mt-10 mb-4">solon models</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Manage AI models.</p>
+        <CodeBlock code={`solon models pull llama3.2:3b    # Download a model
+solon models list                # List installed models
+solon models info llama3.2:3b    # Show model details
+solon models remove llama3.2:3b  # Remove a model
+solon models known               # List known model names
+solon models add mymodel user/repo Q4_K_M  # Add custom mapping`} />
+
+        <h2 class="text-xl font-semibold mt-10 mb-4">solon keys</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Manage API keys.</p>
+        <CodeBlock code={`solon keys create --name my-app             # Create user-scoped key
+solon keys create --name admin --scope admin # Create admin-scoped key
+solon keys list                              # List all active keys
+solon keys revoke <key-or-id>                # Revoke a key`} />
+
+        <h2 class="text-xl font-semibold mt-10 mb-4">solon tunnel</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Manage secure tunnel for remote access.</p>
+        <CodeBlock code={`solon tunnel enable   # Start Cloudflare Tunnel
+solon tunnel disable  # Stop tunnel
+solon tunnel status   # Show tunnel URL and status`} />
+
+        <h2 class="text-xl font-semibold mt-10 mb-4">solon status</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Check if the Solon daemon is running.</p>
+        <CodeBlock code={`solon status              # Check default port
+solon status --port 9000  # Check custom port`} />
+
+        <h2 class="text-xl font-semibold mt-10 mb-4">solon version</h2>
+        <p class="text-gray-600 mb-4 leading-relaxed">Print the Solon version.</p>
+        <CodeBlock code="solon version" />
+      </div>
+    </div>
+  </div>
+
+  <Footer />
+</Base>

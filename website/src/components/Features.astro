@@ -1,0 +1,49 @@
+---
+const features = [
+  {
+    title: 'One-Command Install',
+    description: 'Single binary. No Docker, no Python, no dependency hell. Download and run.',
+    icon: '⚡',
+  },
+  {
+    title: 'OpenAI-Compatible',
+    description: 'Drop-in replacement for the OpenAI API. Works with any existing SDK or client.',
+    icon: '🔌',
+  },
+  {
+    title: 'Mandatory Auth',
+    description: 'API keys on every request. No --no-auth flag. bcrypt-hashed keys, rate limiting, audit logging.',
+    icon: '🔒',
+  },
+  {
+    title: 'Secure Tunnel',
+    description: 'Expose your API to the internet securely via Cloudflare Tunnel. No port forwarding needed.',
+    icon: '🌐',
+  },
+  {
+    title: 'Web Dashboard',
+    description: 'Embedded dashboard for managing models, keys, and monitoring requests. Installable as PWA.',
+    icon: '📊',
+  },
+  {
+    title: 'Model Management',
+    description: 'Pull, list, and remove models from the CLI. Supports GGUF models via llama.cpp and Ollama.',
+    icon: '🤖',
+  },
+]
+---
+
+<section class="max-w-6xl mx-auto px-6 py-20">
+  <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">Everything you need to self-host AI</h2>
+  <p class="text-gray-500 text-center mb-16 max-w-xl mx-auto">Security-first design. Production-ready defaults. Zero configuration.</p>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    {features.map(f => (
+      <div class="p-6 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+        <div class="text-2xl mb-3">{f.icon}</div>
+        <h3 class="text-lg font-semibold mb-2">{f.title}</h3>
+        <p class="text-sm text-gray-500 leading-relaxed">{f.description}</p>
+      </div>
+    ))}
+  </div>
+</section>

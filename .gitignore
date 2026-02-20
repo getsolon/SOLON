@@ -1,0 +1,18 @@
+# Build artifacts
+bin/
+/solon
+
+# Dashboard build output (rebuilt by make build-dashboard)
+dashboard/dist/
+dashboard/node_modules/
+dashboard/package-lock.json
+internal/dashboard/dist/
+
+# Website build output
+website/dist/
+website/node_modules/
+website/package-lock.json
+website/.astro/
+
+# OS files
+.DS_Store

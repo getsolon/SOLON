@@ -1,0 +1,17 @@
+{
+  "name": "solon",
+  "version": "0.1.0",
+  "description": "Self-hosted AI runtime with secure web API",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/openclaw/solon"
+  },
+  "license": "MIT",
+  "scripts": {
+    "build": "make build",
+    "dev": "make dev",
+    "test": "make test",
+    "lint": "make lint"
+  }
+}

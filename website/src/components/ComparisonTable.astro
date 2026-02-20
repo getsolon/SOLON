@@ -1,0 +1,49 @@
+---
+const products = [
+  { name: 'Solon', inference: true, auth: true, remote: true, dashboard: true, binary: true },
+  { name: 'Ollama', inference: true, auth: false, remote: false, dashboard: false, binary: true },
+  { name: 'LM Studio', inference: true, auth: false, remote: false, dashboard: true, binary: false },
+  { name: 'vLLM', inference: true, auth: false, remote: false, dashboard: false, binary: false },
+]
+
+const columns = [
+  { key: 'inference', label: 'Local Inference' },
+  { key: 'auth', label: 'Auth' },
+  { key: 'remote', label: 'Remote Access' },
+  { key: 'dashboard', label: 'Dashboard' },
+  { key: 'binary', label: 'Single Binary' },
+]
+---
+
+<section class="max-w-4xl mx-auto px-6 py-20">
+  <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">How Solon compares</h2>
+  <p class="text-gray-500 text-center mb-12 max-w-xl mx-auto">The only product that combines simplicity, security, and remote access.</p>
+
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-200">
+          <th class="text-left py-3 px-4 font-semibold text-gray-900">Product</th>
+          {columns.map(col => (
+            <th class="text-center py-3 px-4 font-semibold text-gray-900">{col.label}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {products.map(p => (
+          <tr class={`border-b border-gray-100 ${p.name === 'Solon' ? 'bg-gray-50 font-medium' : ''}`}>
+            <td class="py-3 px-4">{p.name}</td>
+            {columns.map(col => (
+              <td class="text-center py-3 px-4">
+                {(p as any)[col.key]
+                  ? <span class="text-green-600 font-bold">Yes</span>
+                  : <span class="text-gray-300">No</span>
+                }
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
