@@ -13,40 +13,40 @@ export default function Models() {
 
   return (
     <div>
-      <h2 style={styles.title}>Models</h2>
+      <h2 style={s.title}>Models</h2>
 
       {loading ? (
-        <p style={styles.muted}>Loading models...</p>
+        <p style={s.muted}>Loading models...</p>
       ) : models.length === 0 ? (
-        <div style={styles.empty}>
-          <p>No models installed.</p>
-          <code style={styles.code}>solon models pull llama3.2:8b</code>
+        <div style={s.empty}>
+          <p style={{ marginBottom: 8 }}>No models installed.</p>
+          <code style={s.code}>solon models pull llama3.2:8b</code>
         </div>
       ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Size</th>
-              <th style={styles.th}>Family</th>
-              <th style={styles.th}>Params</th>
-              <th style={styles.th}>Quantization</th>
-            </tr>
-          </thead>
-          <tbody>
-            {models.map(m => (
-              <tr key={m.name}>
-                <td style={styles.td}>
-                  <strong>{m.name}</strong>
-                </td>
-                <td style={styles.td}>{formatSize(m.size)}</td>
-                <td style={styles.td}>{m.family || '—'}</td>
-                <td style={styles.td}>{m.params || '—'}</td>
-                <td style={styles.td}>{m.quantization || '—'}</td>
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Name</th>
+                <th style={s.th}>Size</th>
+                <th style={s.th}>Family</th>
+                <th style={s.th}>Params</th>
+                <th style={s.th}>Quantization</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {models.map(m => (
+                <tr key={m.name}>
+                  <td style={s.td}><strong>{m.name}</strong></td>
+                  <td style={s.td}>{formatSize(m.size)}</td>
+                  <td style={s.td}>{m.family || '—'}</td>
+                  <td style={s.td}>{m.params || '—'}</td>
+                  <td style={s.td}>{m.quantization || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
@@ -60,12 +60,13 @@ function formatSize(bytes: number): string {
   return `${mb.toFixed(0)} MB`
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px' },
-  muted: { color: '#6b7280' },
-  empty: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, textAlign: 'center' },
-  code: { background: '#f3f4f6', padding: '4px 8px', borderRadius: 4, fontSize: 14 },
-  table: { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' },
-  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', fontSize: 13, color: '#6b7280', fontWeight: 600 },
-  td: { padding: '12px 16px', borderBottom: '1px solid #f3f4f6', fontSize: 14 },
+const s: Record<string, React.CSSProperties> = {
+  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px', color: 'var(--text)' },
+  muted: { color: 'var(--text-tertiary)' },
+  empty: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--text-secondary)' },
+  code: { background: 'var(--bg-code)', padding: '4px 10px', borderRadius: 6, fontSize: 13, fontFamily: '"SF Mono", Monaco, monospace', color: 'var(--text)' },
+  tableWrap: { background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow)' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontSize: 14, color: 'var(--text)' },
 }

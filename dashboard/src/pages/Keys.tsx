@@ -39,90 +39,99 @@ export default function Keys() {
 
   return (
     <div>
-      <h2 style={styles.title}>API Keys</h2>
+      <h2 style={s.title}>API Keys</h2>
 
-      <div style={styles.createBox}>
+      <div style={s.createBox}>
         <input
           type="text"
           placeholder="Key name (e.g. my-app)"
           value={newKeyName}
           onChange={e => setNewKeyName(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleCreate()}
-          style={styles.input}
+          style={s.input}
         />
-        <button onClick={handleCreate} style={styles.button}>
+        <button onClick={handleCreate} style={s.button}>
           Create Key
         </button>
       </div>
 
       {createdKey && (
-        <div style={styles.keyAlert}>
-          <strong>New API Key Created</strong>
-          <div style={styles.keyDisplay}>{createdKey}</div>
-          <p style={styles.keyWarning}>Copy this key now — it won't be shown again.</p>
-          <button onClick={() => { navigator.clipboard.writeText(createdKey); }} style={styles.copyBtn}>
+        <div style={s.keyAlert}>
+          <strong style={{ color: 'var(--green)' }}>New API Key Created</strong>
+          <div style={s.keyDisplay}>{createdKey}</div>
+          <p style={s.keyWarning}>Copy this key now — it won't be shown again.</p>
+          <button onClick={() => { navigator.clipboard.writeText(createdKey) }} style={s.copyBtn}>
             Copy to Clipboard
           </button>
         </div>
       )}
 
       {loading ? (
-        <p style={styles.muted}>Loading keys...</p>
+        <p style={s.muted}>Loading keys...</p>
       ) : keys.length === 0 ? (
-        <div style={styles.empty}>
+        <div style={s.empty}>
           <p>No API keys yet. Create one above.</p>
         </div>
       ) : (
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Name</th>
-              <th style={styles.th}>Prefix</th>
-              <th style={styles.th}>Scope</th>
-              <th style={styles.th}>Rate Limit</th>
-              <th style={styles.th}>Created</th>
-              <th style={styles.th}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map(k => (
-              <tr key={k.id}>
-                <td style={styles.td}><strong>{k.name}</strong></td>
-                <td style={styles.td}><code style={styles.code}>{k.prefix}...</code></td>
-                <td style={styles.td}>{k.scope}</td>
-                <td style={styles.td}>{k.rate_limit}/min</td>
-                <td style={styles.td}>{new Date(k.created_at).toLocaleDateString()}</td>
-                <td style={styles.td}>
-                  <button
-                    onClick={() => handleRevoke(k.id, k.name)}
-                    style={styles.revokeBtn}
-                  >
-                    Revoke
-                  </button>
-                </td>
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>Name</th>
+                <th style={s.th}>Prefix</th>
+                <th style={s.th}>Scope</th>
+                <th style={s.th}>Rate Limit</th>
+                <th style={s.th}>Created</th>
+                <th style={s.th}></th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {keys.map(k => (
+                <tr key={k.id}>
+                  <td style={s.td}><strong>{k.name}</strong></td>
+                  <td style={s.td}><code style={s.code}>{k.prefix}...</code></td>
+                  <td style={s.td}>
+                    <span style={{
+                      ...s.badge,
+                      background: k.scope === 'admin' ? 'var(--bg-badge-blue)' : 'var(--bg-code)',
+                      color: k.scope === 'admin' ? 'var(--badge-blue)' : 'var(--text-secondary)',
+                    }}>
+                      {k.scope}
+                    </span>
+                  </td>
+                  <td style={s.td}>{k.rate_limit}/min</td>
+                  <td style={s.td}>{new Date(k.created_at).toLocaleDateString()}</td>
+                  <td style={{ ...s.td, textAlign: 'right' }}>
+                    <button onClick={() => handleRevoke(k.id, k.name)} style={s.revokeBtn}>
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px' },
+const s: Record<string, React.CSSProperties> = {
+  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px', color: 'var(--text)' },
   createBox: { display: 'flex', gap: 12, marginBottom: 24 },
-  input: { flex: 1, padding: '10px 14px', borderRadius: 8, border: '1px solid #d1d5db', fontSize: 14, outline: 'none' },
-  button: { padding: '10px 20px', borderRadius: 8, border: 'none', background: '#1a1a2e', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  keyAlert: { background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 12, padding: 20, marginBottom: 24 },
-  keyDisplay: { background: '#fff', border: '1px solid #d1d5db', borderRadius: 6, padding: '10px 14px', fontFamily: 'monospace', fontSize: 14, marginTop: 8, wordBreak: 'break-all' },
-  keyWarning: { fontSize: 13, color: '#6b7280', marginTop: 8, marginBottom: 8 },
-  copyBtn: { padding: '6px 14px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', fontSize: 13, cursor: 'pointer' },
-  muted: { color: '#6b7280' },
-  empty: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, textAlign: 'center' },
-  table: { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' },
-  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', fontSize: 13, color: '#6b7280', fontWeight: 600 },
-  td: { padding: '12px 16px', borderBottom: '1px solid #f3f4f6', fontSize: 14 },
-  code: { background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13 },
-  revokeBtn: { padding: '4px 12px', borderRadius: 6, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 13, cursor: 'pointer' },
+  input: { flex: 1, padding: '10px 14px', borderRadius: 10, border: '1px solid var(--border-input)', fontSize: 14, outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' },
+  button: { padding: '10px 22px', borderRadius: 10, border: 'none', background: 'var(--bg-sidebar)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  keyAlert: { background: 'var(--bg-success)', border: '1px solid var(--border-success)', borderRadius: 14, padding: 20, marginBottom: 24 },
+  keyDisplay: { background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 8, padding: '10px 14px', fontFamily: '"SF Mono", Monaco, monospace', fontSize: 13, marginTop: 8, wordBreak: 'break-all', color: 'var(--text)' },
+  keyWarning: { fontSize: 13, color: 'var(--text-secondary)', marginTop: 8, marginBottom: 8 },
+  copyBtn: { padding: '6px 14px', borderRadius: 8, border: '1px solid var(--border-input)', background: 'var(--bg-card)', fontSize: 13, cursor: 'pointer', color: 'var(--text)' },
+  muted: { color: 'var(--text-tertiary)' },
+  empty: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--text-secondary)' },
+  tableWrap: { background: 'var(--bg-card)', borderRadius: 14, border: '1px solid var(--border)', overflow: 'hidden', boxShadow: 'var(--shadow)' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '14px 16px', borderBottom: '1px solid var(--border-light)', fontSize: 14, color: 'var(--text)' },
+  code: { background: 'var(--bg-code)', padding: '2px 8px', borderRadius: 5, fontSize: 12, fontFamily: '"SF Mono", Monaco, monospace', color: 'var(--text-secondary)' },
+  badge: { padding: '3px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600 },
+  revokeBtn: { padding: '5px 14px', borderRadius: 8, border: '1px solid var(--bg-badge-red)', background: 'var(--bg-error)', color: 'var(--red)', fontSize: 13, cursor: 'pointer', fontWeight: 500 },
 }

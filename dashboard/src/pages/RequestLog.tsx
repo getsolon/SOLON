@@ -44,7 +44,7 @@ export default function RequestLog() {
               <tr key={r.id}>
                 <td style={styles.td}>{formatTime(r.created_at)}</td>
                 <td style={styles.td}>
-                  <span style={{ ...styles.method, background: r.method === 'POST' ? '#dbeafe' : '#f3f4f6', color: r.method === 'POST' ? '#1d4ed8' : '#374151' }}>
+                  <span style={{ ...styles.method, background: r.method === 'POST' ? 'var(--bg-badge-blue)' : 'var(--bg-code)', color: r.method === 'POST' ? 'var(--badge-blue)' : 'var(--text-secondary)' }}>
                     {r.method}
                   </span>
                 </td>
@@ -53,7 +53,7 @@ export default function RequestLog() {
                 <td style={styles.td}>{r.tokens_in + r.tokens_out > 0 ? `${r.tokens_in} / ${r.tokens_out}` : '—'}</td>
                 <td style={styles.td}>{r.latency_ms}ms</td>
                 <td style={styles.td}>
-                  <span style={{ ...styles.status, background: r.status_code < 400 ? '#dcfce7' : '#fef2f2', color: r.status_code < 400 ? '#16a34a' : '#dc2626' }}>
+                  <span style={{ ...styles.status, background: r.status_code < 400 ? 'var(--bg-badge-green)' : 'var(--bg-badge-red)', color: r.status_code < 400 ? 'var(--badge-green)' : 'var(--badge-red)' }}>
                     {r.status_code}
                   </span>
                 </td>
@@ -73,14 +73,14 @@ function formatTime(iso: string): string {
 
 const styles: Record<string, React.CSSProperties> = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: 700, margin: 0 },
-  refreshBtn: { padding: '8px 16px', borderRadius: 8, border: '1px solid #d1d5db', background: '#fff', fontSize: 13, cursor: 'pointer' },
-  muted: { color: '#6b7280' },
-  empty: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 32, textAlign: 'center' },
-  table: { width: '100%', borderCollapse: 'collapse', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e5e7eb' },
-  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', fontSize: 13, color: '#6b7280', fontWeight: 600 },
-  td: { padding: '10px 16px', borderBottom: '1px solid #f3f4f6', fontSize: 14 },
-  method: { padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 },
-  code: { background: '#f3f4f6', padding: '2px 6px', borderRadius: 4, fontSize: 13 },
-  status: { padding: '2px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 },
+  title: { fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--text)' },
+  refreshBtn: { padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border-input)', background: 'var(--bg-card)', fontSize: 13, cursor: 'pointer', color: 'var(--text)' },
+  muted: { color: 'var(--text-tertiary)' },
+  empty: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 40, textAlign: 'center', color: 'var(--text-secondary)' },
+  table: { width: '100%', borderCollapse: 'collapse', background: 'var(--bg-card)', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--border)', boxShadow: 'var(--shadow)' },
+  th: { textAlign: 'left', padding: '12px 16px', borderBottom: '1px solid var(--border)', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' },
+  td: { padding: '12px 16px', borderBottom: '1px solid var(--border-light)', fontSize: 14, color: 'var(--text)' },
+  method: { padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600 },
+  code: { background: 'var(--bg-code)', padding: '2px 8px', borderRadius: 5, fontSize: 12, fontFamily: '"SF Mono", Monaco, monospace', color: 'var(--text-secondary)' },
+  status: { padding: '2px 8px', borderRadius: 6, fontSize: 12, fontWeight: 600 },
 }

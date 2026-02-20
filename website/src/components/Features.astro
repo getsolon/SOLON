@@ -35,14 +35,14 @@ const features = [
 
 <section class="max-w-6xl mx-auto px-6 py-20">
   <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">Everything you need to self-host AI</h2>
-  <p class="text-gray-500 text-center mb-16 max-w-xl mx-auto">Security-first design. Production-ready defaults. Zero configuration.</p>
+  <p class="text-gray-500 dark:text-gray-400 text-center mb-16 max-w-xl mx-auto">Security-first design. Production-ready defaults. Zero configuration.</p>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {features.map(f => (
-      <div class="p-6 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+      <div class="p-6 rounded-xl border border-gray-100 dark:border-white/[0.06] hover:border-gray-200 dark:hover:border-white/[0.12] transition-colors bg-white dark:bg-white/[0.02]">
         <div class="text-2xl mb-3">{f.icon}</div>
         <h3 class="text-lg font-semibold mb-2">{f.title}</h3>
-        <p class="text-sm text-gray-500 leading-relaxed">{f.description}</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{f.description}</p>
       </div>
     ))}
   </div>

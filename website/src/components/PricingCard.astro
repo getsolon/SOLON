@@ -12,27 +12,27 @@ interface Props {
 const { name, subtitle, price, per, features, cta, featured = false } = Astro.props
 ---
 
-<div class={`rounded-2xl border p-8 ${featured ? 'border-brand ring-1 ring-brand' : 'border-gray-200'}`}>
+<div class={`rounded-2xl border p-8 bg-white dark:bg-white/[0.02] ${featured ? 'border-brand dark:border-brand-light ring-1 ring-brand dark:ring-brand-light' : 'border-gray-200 dark:border-white/[0.08]'}`}>
   <h3 class="text-xl font-bold">{name}</h3>
-  <p class="text-sm text-gray-500 mt-1">{subtitle}</p>
+  <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
   <div class="mt-4 mb-6">
     <span class="text-4xl font-extrabold tracking-tight">{price}</span>
-    {per && <span class="text-gray-400 text-sm">{per}</span>}
+    {per && <span class="text-gray-400 dark:text-gray-500 text-sm">{per}</span>}
   </div>
   <a
     href={name === 'Enterprise' ? 'mailto:hello@solon.dev' : '/docs'}
     class={`block w-full text-center py-2.5 rounded-lg text-sm font-semibold transition-colors ${
       featured
-        ? 'bg-brand text-white hover:opacity-90'
-        : 'border border-gray-200 text-gray-700 hover:bg-gray-50'
+        ? 'bg-brand dark:bg-brand-light text-white hover:opacity-90'
+        : 'border border-gray-200 dark:border-white/[0.1] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05]'
     }`}
   >
     {cta}
   </a>
   <ul class="mt-6 space-y-2.5">
     {features.map(f => (
-      <li class="text-sm text-gray-600 flex items-start gap-2">
-        <span class="text-green-500 font-bold mt-0.5">&#10003;</span>
+      <li class="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-2">
+        <span class="text-green-500 dark:text-green-400 font-bold mt-0.5">&#10003;</span>
         {f}
       </li>
     ))}

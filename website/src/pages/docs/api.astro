@@ -13,10 +13,10 @@ import Footer from '../../components/Footer.astro'
 
       {/* Sidebar */}
       <aside class="text-sm">
-        <h4 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Getting Started</h4>
-        <a href="/docs" class="block py-1.5 text-gray-500 hover:text-gray-900">Quickstart</a>
-        <a href="/docs/api" class="block py-1.5 text-gray-900 font-medium">API Reference</a>
-        <a href="/docs/cli" class="block py-1.5 text-gray-500 hover:text-gray-900">CLI Reference</a>
+        <h4 class="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-600 font-semibold mb-3">Getting Started</h4>
+        <a href="/docs" class="block py-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">Quickstart</a>
+        <a href="/docs/api" class="block py-1.5 text-gray-900 dark:text-white font-medium">API Reference</a>
+        <a href="/docs/cli" class="block py-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">CLI Reference</a>
       </aside>
 
       {/* Content */}
@@ -24,7 +24,7 @@ import Footer from '../../components/Footer.astro'
         <h1 class="text-3xl font-bold tracking-tight mb-8">API Reference</h1>
 
         <h2 class="text-xl font-semibold mt-10 mb-4">Authentication</h2>
-        <p class="text-gray-600 mb-4 leading-relaxed">
+        <p class="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
           All API requests require authentication via Bearer token:
         </p>
         <CodeBlock code="Authorization: Bearer sol_sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
@@ -32,7 +32,7 @@ import Footer from '../../components/Footer.astro'
         <h2 class="text-xl font-semibold mt-10 mb-4">Inference API (OpenAI-Compatible)</h2>
 
         <h3 class="text-lg font-semibold mt-8 mb-3">POST /v1/chat/completions</h3>
-        <p class="text-gray-600 mb-4">Create a chat completion.</p>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">Create a chat completion.</p>
         <CodeBlock code={`{
   "model": "llama3.2:8b",
   "messages": [
@@ -45,84 +45,84 @@ import Footer from '../../components/Footer.astro'
 }`} />
 
         <h3 class="text-lg font-semibold mt-8 mb-3">POST /v1/embeddings</h3>
-        <p class="text-gray-600 mb-4">Generate text embeddings.</p>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">Generate text embeddings.</p>
         <CodeBlock code={`{
   "model": "nomic-embed-text",
   "input": "Hello world"
 }`} />
 
         <h3 class="text-lg font-semibold mt-8 mb-3">GET /v1/models</h3>
-        <p class="text-gray-600 mb-4">List available models (OpenAI-compatible format).</p>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">List available models (OpenAI-compatible format).</p>
 
         <h2 class="text-xl font-semibold mt-10 mb-4">Management API</h2>
 
-        <p class="text-gray-600 mb-4 leading-relaxed">
+        <p class="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
           Management endpoints require admin-scoped API keys for remote access.
           Localhost requests bypass auth (for dashboard access).
         </p>
 
-        <div class="overflow-x-auto mb-8">
+        <div class="overflow-x-auto mb-8 rounded-xl border border-gray-200 dark:border-white/[0.06]">
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-gray-200">
+              <tr class="border-b border-gray-200 dark:border-white/[0.06]">
                 <th class="text-left py-2 px-3 font-semibold">Method</th>
                 <th class="text-left py-2 px-3 font-semibold">Path</th>
                 <th class="text-left py-2 px-3 font-semibold">Description</th>
               </tr>
             </thead>
-            <tbody class="text-gray-600">
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">GET</code></td>
+            <tbody class="text-gray-600 dark:text-gray-400">
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-xs">GET</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/health</code></td>
                 <td class="py-2 px-3">Health check (no auth)</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">GET</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-xs">GET</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/keys</code></td>
                 <td class="py-2 px-3">List API keys</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">POST</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-xs">POST</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/keys</code></td>
                 <td class="py-2 px-3">Create API key</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">DELETE</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded text-xs">DELETE</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/keys/:id</code></td>
                 <td class="py-2 px-3">Revoke API key</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">POST</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-xs">POST</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/models/pull</code></td>
                 <td class="py-2 px-3">Pull a model</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-red-100 text-red-700 px-1.5 py-0.5 rounded text-xs">DELETE</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 px-1.5 py-0.5 rounded text-xs">DELETE</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/models/:name</code></td>
                 <td class="py-2 px-3">Delete a model</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">GET</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-xs">GET</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/analytics/requests</code></td>
                 <td class="py-2 px-3">Request log</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">GET</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-xs">GET</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/analytics/usage</code></td>
                 <td class="py-2 px-3">Usage statistics</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-gray-100 px-1.5 py-0.5 rounded text-xs">GET</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-xs">GET</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/tunnel/status</code></td>
                 <td class="py-2 px-3">Tunnel status</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">POST</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-xs">POST</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/tunnel/enable</code></td>
                 <td class="py-2 px-3">Enable tunnel</td>
               </tr>
-              <tr class="border-b border-gray-100">
-                <td class="py-2 px-3"><code class="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs">POST</code></td>
+              <tr class="border-b border-gray-100 dark:border-white/[0.04]">
+                <td class="py-2 px-3"><code class="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-xs">POST</code></td>
                 <td class="py-2 px-3"><code class="text-xs">/api/v1/tunnel/disable</code></td>
                 <td class="py-2 px-3">Disable tunnel</td>
               </tr>

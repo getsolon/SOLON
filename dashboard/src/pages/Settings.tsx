@@ -75,15 +75,15 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px' },
-  error: { background: '#fef2f2', color: '#dc2626', padding: '12px 16px', borderRadius: 8, marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: 700, margin: '0 0 24px', color: 'var(--text)' },
+  error: { background: 'var(--bg-error)', color: 'var(--red)', padding: '12px 16px', borderRadius: 10, marginBottom: 16, fontSize: 14 },
   section: { marginBottom: 32 },
-  sectionTitle: { fontSize: 16, fontWeight: 600, marginBottom: 12, color: '#374151' },
-  card: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 12, padding: 20 },
-  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f3f4f6' },
-  rowLabel: { fontSize: 14, color: '#6b7280' },
-  rowValue: { fontSize: 14, fontWeight: 500 },
+  sectionTitle: { fontSize: 16, fontWeight: 600, marginBottom: 12, color: 'var(--text-secondary)' },
+  card: { background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 14, padding: 20, boxShadow: 'var(--shadow)' },
+  row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid var(--border-light)' },
+  rowLabel: { fontSize: 14, color: 'var(--text-tertiary)' },
+  rowValue: { fontSize: 14, fontWeight: 500, color: 'var(--text)' },
   rowActions: { paddingTop: 16 },
-  enableBtn: { padding: '8px 20px', borderRadius: 8, border: 'none', background: '#1a1a2e', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
-  disableBtn: { padding: '8px 20px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#dc2626', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  enableBtn: { padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--bg-sidebar)', color: '#fff', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  disableBtn: { padding: '8px 20px', borderRadius: 8, border: '1px solid var(--bg-badge-red)', background: 'var(--bg-error)', color: 'var(--red)', fontSize: 14, fontWeight: 600, cursor: 'pointer' },
 }

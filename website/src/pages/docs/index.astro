@@ -13,23 +13,23 @@ import Footer from '../../components/Footer.astro'
 
       {/* Sidebar */}
       <aside class="text-sm">
-        <h4 class="text-xs uppercase tracking-wider text-gray-400 font-semibold mb-3">Getting Started</h4>
-        <a href="/docs" class="block py-1.5 text-gray-900 font-medium">Quickstart</a>
-        <a href="/docs/api" class="block py-1.5 text-gray-500 hover:text-gray-900">API Reference</a>
-        <a href="/docs/cli" class="block py-1.5 text-gray-500 hover:text-gray-900">CLI Reference</a>
+        <h4 class="text-xs uppercase tracking-wider text-gray-400 dark:text-gray-600 font-semibold mb-3">Getting Started</h4>
+        <a href="/docs" class="block py-1.5 text-gray-900 dark:text-white font-medium">Quickstart</a>
+        <a href="/docs/api" class="block py-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">API Reference</a>
+        <a href="/docs/cli" class="block py-1.5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">CLI Reference</a>
       </aside>
 
       {/* Content */}
       <div class="prose-container">
         <h1 class="text-3xl font-bold tracking-tight mb-8">Quickstart</h1>
 
-        <p class="text-gray-600 mb-6 leading-relaxed">Get up and running with Solon in under a minute.</p>
+        <p class="text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">Get up and running with Solon in under a minute.</p>
 
         <h2 class="text-xl font-semibold mt-10 mb-4">Install</h2>
         <CodeBlock code="curl -fsSL https://get.solon.dev | sh" />
 
         <h2 class="text-xl font-semibold mt-10 mb-4">Start the server</h2>
-        <p class="text-gray-600 mb-4 leading-relaxed">
+        <p class="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
           On first run, Solon automatically creates an admin API key and displays it.
           Save this key — it won't be shown again.
         </p>
@@ -48,8 +48,8 @@ import Footer from '../../components/Footer.astro'
   }'`} />
 
         <h2 class="text-xl font-semibold mt-10 mb-4">Open the dashboard</h2>
-        <p class="text-gray-600 mb-4 leading-relaxed">
-          Visit <code class="bg-gray-100 px-1.5 py-0.5 rounded text-sm">http://localhost:8420</code> in your browser
+        <p class="text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
+          Visit <code class="bg-gray-100 dark:bg-white/[0.06] px-1.5 py-0.5 rounded text-sm">http://localhost:8420</code> in your browser
           to access the built-in dashboard for managing models, API keys, and monitoring requests.
         </p>
 

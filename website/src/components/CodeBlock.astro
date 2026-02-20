@@ -8,10 +8,10 @@ const { code, lang = 'bash' } = Astro.props
 ---
 
 <div class="relative group">
-  <pre class="bg-gray-50 border border-gray-200 rounded-xl p-5 overflow-x-auto text-sm font-mono leading-relaxed"><code>{code}</code></pre>
+  <pre class="bg-gray-50 dark:bg-white/[0.04] border border-gray-200 dark:border-white/[0.06] rounded-xl p-5 overflow-x-auto text-sm font-mono leading-relaxed text-gray-800 dark:text-gray-300"><code>{code}</code></pre>
   <button
     onclick={`navigator.clipboard.writeText(${JSON.stringify(code)})`}
-    class="absolute top-3 right-3 text-gray-300 hover:text-gray-500 transition-colors opacity-0 group-hover:opacity-100"
+    class="absolute top-3 right-3 text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-300 transition-colors opacity-0 group-hover:opacity-100"
     title="Copy"
   >
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

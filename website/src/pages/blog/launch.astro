@@ -9,12 +9,12 @@ import Footer from '../../components/Footer.astro'
   <Navbar current="/blog" />
 
   <article class="max-w-3xl mx-auto px-6 pt-16 pb-32">
-    <time class="text-sm text-gray-400">February 2026</time>
+    <time class="text-sm text-gray-400 dark:text-gray-500">February 2026</time>
     <h1 class="text-4xl font-extrabold tracking-tight mt-3 mb-8">
       Introducing Solon: Your AI. Your rules.
     </h1>
 
-    <div class="prose text-gray-600 leading-relaxed space-y-6">
+    <div class="prose text-gray-600 dark:text-gray-400 leading-relaxed space-y-6">
       <p>
         Running AI models locally has gotten easy. Running them <em>securely</em> has not.
       </p>
@@ -24,21 +24,21 @@ import Footer from '../../components/Footer.astro'
         The current default path for self-hosted AI is a security disaster. We built Solon to fix this.
       </p>
 
-      <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">What is Solon?</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12 mb-4">What is Solon?</h2>
       <p>
         Solon is a self-hosted AI runtime that combines Ollama-level simplicity with production-grade
         security. It's a single Go binary that runs AI models locally and exposes them via an
         authenticated, OpenAI-compatible API.
       </p>
 
-      <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Security is the foundation</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12 mb-4">Security is the foundation</h2>
       <p>
-        Auth is mandatory. There is no <code>--no-auth</code> flag. Every request requires an API key.
+        Auth is mandatory. There is no <code class="bg-gray-100 dark:bg-white/[0.06] px-1 py-0.5 rounded text-sm">--no-auth</code> flag. Every request requires an API key.
         Keys are bcrypt-hashed and shown only once on creation. Rate limiting and audit logging
         are enabled by default.
       </p>
 
-      <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Get started in 30 seconds</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12 mb-4">Get started in 30 seconds</h2>
       <CodeBlock code={`# Install
 curl -fsSL https://get.solon.dev | sh
 
@@ -53,17 +53,17 @@ curl http://localhost:8420/v1/chat/completions \\
   -H "Authorization: Bearer sol_sk_live_xxxx" \\
   -d '{"model":"llama3.2:3b","messages":[{"role":"user","content":"Hello!"}]}'`} />
 
-      <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Key features</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12 mb-4">Key features</h2>
       <ul class="list-disc pl-6 space-y-2">
-        <li><strong>Single binary</strong> — No Docker, no Python, no dependencies</li>
-        <li><strong>OpenAI-compatible</strong> — Works with any existing OpenAI SDK</li>
-        <li><strong>Mandatory auth</strong> — API keys, rate limiting, audit logging</li>
-        <li><strong>Secure tunnel</strong> — Expose your API via Cloudflare Tunnel</li>
-        <li><strong>Web dashboard</strong> — Manage everything from your browser</li>
-        <li><strong>Model management</strong> — Pull, list, and remove models from the CLI</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">Single binary</strong> — No Docker, no Python, no dependencies</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">OpenAI-compatible</strong> — Works with any existing OpenAI SDK</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">Mandatory auth</strong> — API keys, rate limiting, audit logging</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">Secure tunnel</strong> — Expose your API via Cloudflare Tunnel</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">Web dashboard</strong> — Manage everything from your browser</li>
+        <li><strong class="text-gray-900 dark:text-gray-200">Model management</strong> — Pull, list, and remove models from the CLI</li>
       </ul>
 
-      <h2 class="text-2xl font-bold text-gray-900 mt-12 mb-4">Open source</h2>
+      <h2 class="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-12 mb-4">Open source</h2>
       <p>
         Solon is MIT licensed. The core product is free forever. Revenue comes from optional
         managed infrastructure (Solon Relay for stable URLs) and team features — not from
@@ -72,7 +72,7 @@ curl http://localhost:8420/v1/chat/completions \\
 
       <p>
         We'd love your feedback. Star us on
-        <a href="https://github.com/openclaw/solon" class="text-blue-600 hover:underline">GitHub</a>,
+        <a href="https://github.com/openclaw/solon" class="text-blue-600 dark:text-blue-400 hover:underline">GitHub</a>,
         try it out, and let us know what you think.
       </p>
     </div>
