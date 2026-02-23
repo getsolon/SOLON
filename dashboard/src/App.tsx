@@ -1,126 +1,126 @@
-import { useState, useEffect } from 'react'
-import Overview from './pages/Overview'
-import Models from './pages/Models'
-import Keys from './pages/Keys'
-import RequestLog from './pages/RequestLog'
-import Settings from './pages/Settings'
+import { useEffect } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './hooks/useAuth'
+import { useTheme } from './hooks/useTheme'
+import { useModeStore } from './store/mode'
+import { localAPI } from './api/local'
+import { InstanceProvider } from './contexts/InstanceContext'
+import AuthLayout from './layouts/AuthLayout'
+import AppLayout from './layouts/AppLayout'
 
-type Page = 'overview' | 'models' | 'keys' | 'requests' | 'settings'
+// Instance pages (shared between local and remote)
+import Overview from './pages/instance/Overview'
+import Models from './pages/instance/Models'
+import Keys from './pages/instance/Keys'
+import Requests from './pages/instance/Requests'
+import InstanceSettings from './pages/instance/InstanceSettings'
 
-const NAV_ITEMS: { id: Page; label: string; icon: string }[] = [
-  { id: 'overview', label: 'Overview', icon: '◎' },
-  { id: 'models', label: 'Models', icon: '◆' },
-  { id: 'keys', label: 'API Keys', icon: '⚷' },
-  { id: 'requests', label: 'Requests', icon: '⇄' },
-  { id: 'settings', label: 'Settings', icon: '⚙' },
-]
+// Cloud pages
+import Login from './pages/cloud/Login'
+import Register from './pages/cloud/Register'
+import Instances from './pages/cloud/Instances'
+import InstanceDetail from './pages/cloud/InstanceDetail'
+import Billing from './pages/cloud/Billing'
+import Team from './pages/cloud/Team'
+import AccountSettings from './pages/cloud/AccountSettings'
+
+function RequireLocal({ children }: { children: React.ReactNode }) {
+  const mode = useModeStore(s => s.mode)
+  if (mode === 'cloud') return <Navigate to="/instances" replace />
+  return <>{children}</>
+}
+
+function RequireCloudAuth({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  return <>{children}</>
+}
+
+function RequireGuest({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  const mode = useModeStore(s => s.mode)
+  if (mode === 'local') return <Navigate to="/instance/local" replace />
+  if (user) return <Navigate to="/" replace />
+  return <>{children}</>
+}
+
+function RootRedirect() {
+  const mode = useModeStore(s => s.mode)
+  const { user } = useAuth()
+
+  if (mode === 'local') return <Navigate to="/instance/local" replace />
+  if (mode === 'hybrid') return <Navigate to="/instance/local" replace />
+  // cloud mode
+  if (user) return <Navigate to="/instances" replace />
+  return <Navigate to="/login" replace />
+}
+
+function LocalInstanceWrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <InstanceProvider api={localAPI} instanceName="Local Instance">
+      {children}
+    </InstanceProvider>
+  )
+}
 
 export default function App() {
-  const [page, setPage] = useState<Page>('overview')
-  const [dark, setDark] = useState(() => {
-    const saved = localStorage.getItem('solon-theme')
-    if (saved) return saved === 'dark'
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+  useTheme()
+  const { loading: authLoading } = useAuth()
+  const { loading: modeLoading, init } = useModeStore()
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
-    localStorage.setItem('solon-theme', dark ? 'dark' : 'light')
-  }, [dark])
+    init()
+  }, [init])
+
+  if (modeLoading || authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
+        <div className="text-center">
+          <div className="mx-auto mb-3 h-10 w-10 rounded-xl bg-brand flex items-center justify-center">
+            <span className="text-white font-bold text-lg">S</span>
+          </div>
+          <p className="text-sm text-[var(--text-tertiary)]">Loading...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Sidebar */}
-      <nav style={{
-        width: 240,
-        background: 'var(--bg-sidebar)',
-        color: '#fff',
-        display: 'flex',
-        flexDirection: 'column',
-        flexShrink: 0,
-        borderRight: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        {/* Logo */}
-        <div style={{ padding: '28px 24px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.5px' }}>Solon</div>
-          <div style={{ fontSize: 11, opacity: 0.35, marginTop: 4, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
-            Dashboard
-          </div>
-        </div>
+    <Routes>
+      {/* Auth routes (cloud-only) */}
+      <Route element={<RequireGuest><AuthLayout /></RequireGuest>}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
 
-        {/* Nav items */}
-        <div style={{ flex: 1, padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.id}
-              onClick={() => setPage(item.id)}
-              style={{
-                background: page === item.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                border: 'none',
-                color: page === item.id ? '#fff' : 'rgba(255,255,255,0.5)',
-                padding: '10px 14px',
-                borderRadius: 10,
-                textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: page === item.id ? 600 : 400,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 10,
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={e => {
-                if (page !== item.id) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.8)'
-                }
-              }}
-              onMouseLeave={e => {
-                if (page !== item.id) {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = 'rgba(255,255,255,0.5)'
-                }
-              }}
-            >
-              <span style={{ fontSize: 16, width: 20, textAlign: 'center', opacity: 0.7 }}>{item.icon}</span>
-              {item.label}
-            </button>
-          ))}
-        </div>
+      {/* App routes */}
+      <Route element={<AppLayout />}>
+        {/* Root redirect */}
+        <Route path="/" element={<RootRedirect />} />
 
-        {/* Bottom: theme toggle + version */}
-        <div style={{ padding: '16px 14px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 12, opacity: 0.25 }}>v0.1.0-dev</span>
-          <button
-            onClick={() => setDark(!dark)}
-            title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-            style={{
-              background: 'rgba(255,255,255,0.08)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              padding: '5px 10px',
-              cursor: 'pointer',
-              color: 'rgba(255,255,255,0.6)',
-              fontSize: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-            }}
-          >
-            {dark ? '☀' : '☾'}
-            <span style={{ fontSize: 11 }}>{dark ? 'Light' : 'Dark'}</span>
-          </button>
-        </div>
-      </nav>
+        {/* Local instance routes */}
+        <Route path="/instance/local" element={<RequireLocal><LocalInstanceWrapper><Overview /></LocalInstanceWrapper></RequireLocal>} />
+        <Route path="/instance/local/models" element={<RequireLocal><LocalInstanceWrapper><Models /></LocalInstanceWrapper></RequireLocal>} />
+        <Route path="/instance/local/keys" element={<RequireLocal><LocalInstanceWrapper><Keys /></LocalInstanceWrapper></RequireLocal>} />
+        <Route path="/instance/local/requests" element={<RequireLocal><LocalInstanceWrapper><Requests /></LocalInstanceWrapper></RequireLocal>} />
+        <Route path="/instance/local/settings" element={<RequireLocal><LocalInstanceWrapper><InstanceSettings /></LocalInstanceWrapper></RequireLocal>} />
 
-      {/* Main content */}
-      <main style={{ flex: 1, padding: '32px 40px', overflow: 'auto', maxWidth: 1100 }}>
-        {page === 'overview' && <Overview />}
-        {page === 'models' && <Models />}
-        {page === 'keys' && <Keys />}
-        {page === 'requests' && <RequestLog />}
-        {page === 'settings' && <Settings />}
-      </main>
-    </div>
+        {/* Cloud routes */}
+        <Route path="/instances" element={<RequireCloudAuth><Instances /></RequireCloudAuth>} />
+        <Route path="/instances/:id" element={<RequireCloudAuth><InstanceDetail /></RequireCloudAuth>}>
+          <Route index element={<Overview />} />
+          <Route path="models" element={<Models />} />
+          <Route path="keys" element={<Keys />} />
+          <Route path="requests" element={<Requests />} />
+          <Route path="settings" element={<InstanceSettings />} />
+        </Route>
+        <Route path="/billing" element={<RequireCloudAuth><Billing /></RequireCloudAuth>} />
+        <Route path="/team" element={<RequireCloudAuth><Team /></RequireCloudAuth>} />
+        <Route path="/settings" element={<RequireCloudAuth><AccountSettings /></RequireCloudAuth>} />
+      </Route>
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
