@@ -12,35 +12,39 @@ import (
 
 	"github.com/openclaw/solon/internal/dashboard"
 	"github.com/openclaw/solon/internal/inference"
+	"github.com/openclaw/solon/internal/models"
 	"github.com/openclaw/solon/internal/storage"
 	"github.com/openclaw/solon/internal/tunnel"
 )
 
 // Config holds gateway configuration.
 type Config struct {
-	Port   int
-	Engine *inference.Engine
-	Store  *storage.DB
-	Tunnel tunnel.Tunnel
+	Port    int
+	Version string
+	Engine  *inference.Engine
+	Store   *storage.DB
+	Tunnel  tunnel.Tunnel
 }
 
 // Gateway is the main HTTP server that handles auth, routing, and middleware.
 type Gateway struct {
-	router chi.Router
-	engine *inference.Engine
-	store  *storage.DB
-	tunnel tunnel.Tunnel
-	port   int
+	router  chi.Router
+	engine  *inference.Engine
+	store   *storage.DB
+	tunnel  tunnel.Tunnel
+	port    int
+	version string
 }
 
 // New creates a new Gateway with the given configuration.
 func New(cfg Config) (*Gateway, error) {
 	g := &Gateway{
-		router: chi.NewRouter(),
-		engine: cfg.Engine,
-		store:  cfg.Store,
-		tunnel: cfg.Tunnel,
-		port:   cfg.Port,
+		router:  chi.NewRouter(),
+		engine:  cfg.Engine,
+		store:   cfg.Store,
+		tunnel:  cfg.Tunnel,
+		port:    cfg.Port,
+		version: cfg.Version,
 	}
 
 	g.setupRoutes()
@@ -59,9 +63,9 @@ func (g *Gateway) setupRoutes() {
 	// Health check (no auth required)
 	r.Get("/api/v1/health", g.handleHealth)
 
-	// OpenAI-compatible inference API (auth required)
+	// OpenAI-compatible inference API (localhost bypass for dashboard, auth for remote)
 	r.Group(func(r chi.Router) {
-		r.Use(g.Authenticate)
+		r.Use(g.LocalhostOrAuth)
 		r.Use(g.RateLimit)
 
 		r.Post("/v1/chat/completions", g.handleChatCompletions)
@@ -326,9 +330,13 @@ func (g *Gateway) handleListModels(w http.ResponseWriter, r *http.Request) {
 // --- Management handlers ---
 
 func (g *Gateway) handleHealth(w http.ResponseWriter, r *http.Request) {
+	v := g.version
+	if v == "" {
+		v = "dev"
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":  "ok",
-		"version": "dev",
+		"version": v,
 	})
 }
 
@@ -403,7 +411,8 @@ func (g *Gateway) handleListModelsDetailed(w http.ResponseWriter, r *http.Reques
 
 func (g *Gateway) handlePullModel(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name string `json:"name"`
+		Name   string `json:"name"`
+		Stream bool   `json:"stream"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -414,12 +423,49 @@ func (g *Gateway) handlePullModel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := g.engine.PullModel(r.Context(), req.Name, nil); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if !req.Stream {
+		if err := g.engine.PullModel(r.Context(), req.Name, nil); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "pulled"})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "pulled"})
+	// SSE streaming progress
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		if u, ok2 := w.(interface{ Unwrap() http.ResponseWriter }); ok2 {
+			flusher, ok = u.Unwrap().(http.Flusher)
+		}
+	}
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.WriteHeader(http.StatusOK)
+	flusher.Flush()
+
+	err := g.engine.PullModel(r.Context(), req.Name, func(p models.DownloadProgress) {
+		data, _ := json.Marshal(p)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+	})
+
+	if err != nil {
+		data, _ := json.Marshal(map[string]string{"event": "error", "message": err.Error()})
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+		return
+	}
+
+	data, _ := json.Marshal(map[string]string{"event": "done", "status": "pulled"})
+	fmt.Fprintf(w, "data: %s\n\n", data)
+	flusher.Flush()
 }
 
 func (g *Gateway) handleDeleteModel(w http.ResponseWriter, r *http.Request) {

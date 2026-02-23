@@ -28,6 +28,10 @@ const { title = 'Solon — Your AI. Your rules.', description = 'Self-hosted AI 
         if (saved === 'dark' || (!saved && prefersDark)) {
           document.documentElement.classList.add('dark')
         }
+        window.toggleTheme = function() {
+          var isDark = document.documentElement.classList.toggle('dark')
+          localStorage.setItem('solon-theme', isDark ? 'dark' : 'light')
+        }
       })()
     </script>
   </head>

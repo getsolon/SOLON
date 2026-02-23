@@ -41,6 +41,7 @@ func main() {
 
 func serveCmd() *cobra.Command {
 	var port int
+	var enableTunnel bool
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -80,10 +81,11 @@ func serveCmd() *cobra.Command {
 			t := tunnel.NewCloudflare(port)
 
 			gw, err := gateway.New(gateway.Config{
-				Port:   port,
-				Engine: engine,
-				Store:  db,
-				Tunnel: t,
+				Port:    port,
+				Version: version,
+				Engine:  engine,
+				Store:   db,
+				Tunnel:  t,
 			})
 			if err != nil {
 				return fmt.Errorf("creating gateway: %w", err)
@@ -91,11 +93,22 @@ func serveCmd() *cobra.Command {
 
 			fmt.Printf("Solon is running at http://localhost:%d\n", port)
 			fmt.Printf("Dashboard: http://localhost:%d\n", port)
+
+			if enableTunnel {
+				fmt.Println("Starting tunnel...")
+				if err := t.Enable(cmd.Context()); err != nil {
+					fmt.Printf("Warning: tunnel failed to start: %v\n", err)
+				} else {
+					fmt.Printf("Tunnel: %s\n", t.URL())
+				}
+			}
+
 			return gw.ListenAndServe()
 		},
 	}
 
 	cmd.Flags().IntVarP(&port, "port", "p", 8420, "Port to listen on")
+	cmd.Flags().BoolVar(&enableTunnel, "tunnel", false, "Enable Cloudflare tunnel on startup")
 	return cmd
 }
 

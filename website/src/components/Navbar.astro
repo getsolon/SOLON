@@ -26,8 +26,8 @@ const links = [
       >
         GitHub
       </a>
-      <button
-        onclick="document.documentElement.classList.toggle('dark');localStorage.setItem('solon-theme',document.documentElement.classList.contains('dark')?'dark':'light')"
+      <Fragment set:html={`<button
+        onclick="toggleTheme()"
         class="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
         title="Toggle theme"
       >
@@ -37,7 +37,7 @@ const links = [
         <svg class="block dark:hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
-      </button>
+      </button>`} />
     </div>
   </div>
 </nav>
