@@ -25,7 +25,7 @@ build: build-dashboard build-llamacpp
 build-llamacpp:
 	@if [ -d "$(LLAMA_GO_DIR)" ]; then \
 		echo "Building llama.cpp via llama-go..."; \
-		cd $(LLAMA_GO_DIR) && CMAKE_ARGS="-DBUILD_SHARED_LIBS=OFF" make libbinding.a; \
+		(cd $(LLAMA_GO_DIR) && CMAKE_ARGS="-DBUILD_SHARED_LIBS=OFF" make libbinding.a); \
 		echo "Copying extra static libraries..."; \
 		cp -f $(LLAMA_GO_DIR)/build/ggml/src/ggml-metal/libggml-metal.a $(LLAMA_GO_DIR)/ 2>/dev/null || true; \
 		cp -f $(LLAMA_GO_DIR)/build/ggml/src/ggml-blas/libggml-blas.a $(LLAMA_GO_DIR)/ 2>/dev/null || true; \
