@@ -1,5 +1,5 @@
 import { fetchJSON } from './client'
-import type { InstanceAPI, HealthStatus, ModelInfo, APIKey, RequestLogEntry, UsageStats, TunnelStatus } from './types'
+import type { InstanceAPI, HealthStatus, ModelInfo, APIKey, RequestLogEntry, UsageStats, TunnelStatus, DownloadProgress } from './types'
 
 // Local instance API — same-origin calls, no auth headers needed
 // Go's LocalhostOrAuth middleware handles authentication for localhost
@@ -33,4 +33,81 @@ export const localAPI: InstanceAPI = {
     enable: () => fetchJSON<TunnelStatus>('/api/v1/tunnel/enable', { method: 'POST' }),
     disable: () => fetchJSON<{ status: string }>('/api/v1/tunnel/disable', { method: 'POST' }),
   },
+}
+
+export interface PullModelCallbacks {
+  onProgress: (progress: DownloadProgress) => void
+  onDone: () => void
+  onError: (error: string) => void
+}
+
+/**
+ * Pulls a model via SSE. Returns an AbortController for cancellation.
+ */
+export function pullModel(name: string, callbacks: PullModelCallbacks): AbortController {
+  const controller = new AbortController()
+
+  ;(async () => {
+    try {
+      const res = await fetch('/api/v1/models/pull', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: { message: res.statusText } }))
+        callbacks.onError(err.error?.message || res.statusText)
+        return
+      }
+
+      const reader = res.body?.getReader()
+      if (!reader) {
+        callbacks.onError('No response body')
+        return
+      }
+
+      const decoder = new TextDecoder()
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || trimmed.startsWith(':')) continue
+
+          if (trimmed.startsWith('data: ')) {
+            try {
+              const data: DownloadProgress = JSON.parse(trimmed.slice(6))
+              if (data.event === 'done') {
+                callbacks.onDone()
+                return
+              }
+              if (data.event === 'error') {
+                callbacks.onError(data.message || 'Pull failed')
+                return
+              }
+              callbacks.onProgress(data)
+            } catch {
+              // skip malformed chunks
+            }
+          }
+        }
+      }
+
+      callbacks.onDone()
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') return
+      callbacks.onError((err as Error).message)
+    }
+  })()
+
+  return controller
 }

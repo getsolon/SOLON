@@ -136,6 +136,17 @@ export interface CloudAPIToken {
   last_used?: string
 }
 
+// Download/pull types
+
+export interface DownloadProgress {
+  event: string      // "start" | "progress" | "done" | "error"
+  file: string
+  downloaded: number
+  total: number
+  percent: number
+  message: string
+}
+
 // Chat types
 
 export interface ChatMessage {

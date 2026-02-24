@@ -14,12 +14,12 @@ import (
 
 // DownloadProgress reports download progress to the caller.
 type DownloadProgress struct {
-	Event      string  // "start", "progress", "done", "error"
-	File       string  // filename being downloaded
-	Downloaded int64   // bytes downloaded so far
-	Total      int64   // total bytes
-	Percent    float64 // 0-100
-	Message    string  // additional info
+	Event      string  `json:"event"`      // "start", "progress", "done", "error"
+	File       string  `json:"file"`       // filename being downloaded
+	Downloaded int64   `json:"downloaded"` // bytes downloaded so far
+	Total      int64   `json:"total"`      // total bytes
+	Percent    float64 `json:"percent"`    // 0-100
+	Message    string  `json:"message"`    // additional info
 }
 
 // DownloadResult contains information about a completed download.

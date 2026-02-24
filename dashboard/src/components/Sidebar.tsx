@@ -3,6 +3,7 @@ import { useUIStore } from '../store/ui'
 import { useAuthStore } from '../store/auth'
 import { useModeStore } from '../store/mode'
 import { useInstancesStore } from '../store/instances'
+import { useServerStore } from '../store/server'
 import ThemeToggle from './ThemeToggle'
 
 const localNavItems = [
@@ -115,6 +116,8 @@ export default function Sidebar() {
   const mode = useModeStore(s => s.mode)
   const user = useAuthStore(s => s.user)
   const instances = useInstancesStore(s => s.instances)
+  const version = useServerStore(s => s.version)
+  const tunnel = useServerStore(s => s.tunnel)
   const navigate = useNavigate()
   const plan = user?.plan || 'free'
 
@@ -222,8 +225,11 @@ export default function Sidebar() {
               Sign in to Cloud &rarr;
             </button>
           )}
-          {showLocal && !user && mode === 'local' && (
-            <span className="text-[11px] text-white/25">v0.1.0</span>
+          {showLocal && (
+            <span className="text-[11px] text-white/25 flex items-center gap-1.5">
+              {tunnel?.enabled && <span className="w-2 h-2 rounded-full bg-green-400" />}
+              {version ? `v${version}` : ''}
+            </span>
           )}
           {user && (
             <div className="flex items-center gap-2">

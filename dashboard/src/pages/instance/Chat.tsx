@@ -13,6 +13,7 @@ export default function Chat() {
   const { api } = useInstanceContext()
   const [models, setModels] = useState<{ name: string; size: number; format: string; family: string; params: string; quantization: string; modified: string }[]>([])
   const [conversationsOpen, setConversationsOpen] = useState(false)
+  const [modelSelectorOpen, setModelSelectorOpen] = useState(false)
   const setSidebarOpen = useUIStore(s => s.setSidebarOpen)
 
   const {
@@ -79,10 +80,10 @@ export default function Chat() {
         handleNewConversation()
       }
 
-      // Ctrl/Cmd+K: focus model selector (handled by ModelSelector opening)
+      // Ctrl/Cmd+K: toggle model selector
       if (mod && e.key === 'k') {
         e.preventDefault()
-        // Toggle model selector - let component handle it
+        setModelSelectorOpen(v => !v)
       }
 
       // Ctrl/Cmd+Shift+S: toggle conversation sidebar
@@ -146,6 +147,8 @@ export default function Chat() {
           selected={selectedModel}
           onSelect={handleModelChange}
           disabled={streaming}
+          isOpen={modelSelectorOpen}
+          onOpenChange={setModelSelectorOpen}
         />
       </div>
 

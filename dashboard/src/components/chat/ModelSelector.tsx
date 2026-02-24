@@ -6,11 +6,20 @@ interface ModelSelectorProps {
   selected: string
   onSelect: (model: string) => void
   disabled?: boolean
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export default function ModelSelector({ models, selected, onSelect, disabled }: ModelSelectorProps) {
-  const [open, setOpen] = useState(false)
+export default function ModelSelector({ models, selected, onSelect, disabled, isOpen, onOpenChange }: ModelSelectorProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+
+  // Controlled takes precedence over internal state
+  const open = isOpen !== undefined ? isOpen : internalOpen
+  const setOpen = (v: boolean) => {
+    if (onOpenChange) onOpenChange(v)
+    setInternalOpen(v)
+  }
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
