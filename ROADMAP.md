@@ -1,6 +1,6 @@
 # Solon Product Roadmap
 
-## Current State (v0.1.0-dev)
+## Current State (v0.2.0-dev)
 
 **Working end-to-end:**
 - Go runtime: inference via Ollama proxy + llama.cpp (CGO), model pull/list/remove, streaming SSE
@@ -10,101 +10,41 @@
 - Cloudflare quick tunnel: starts `cloudflared`, parses trycloudflare.com URL
 - Website: landing, pricing, docs, install script — deployed to Cloudflare Pages
 - CI/CD: test + lint, cross-compile 4 targets, GitHub releases on tag, website + dashboard deploy
+- Model pull progress streaming (SSE) with real-time progress bar
+- Health endpoint returns build-injected version
+- PWA: manifest, service worker, "Add to Home Screen"
+- Tunnel: `--tunnel` flag on `solon serve`, QR code + copy in Settings, status dot in sidebar
+- Keyboard shortcuts: Ctrl/Cmd+K (model selector), Ctrl/Cmd+Shift+S (toggle sidebar)
 
 **Scaffolded / mock:**
 - Dashboard cloud mode: login, register, billing, team, instances — all mock data in `api/cloud.ts`
-- Relay tunnel: interface defined, all methods return "not yet implemented (v0.2)"
-- MLX backend: `Available()` works on Apple Silicon, all ops return "not yet implemented (v0.2)"
+- Relay tunnel: interface defined, all methods return "not yet implemented"
+- MLX backend: `Available()` works on Apple Silicon, all ops return "not yet implemented"
 - OpenClaw provider: thin adapter exists, never instantiated or wired
 - `models` DB table: schema exists, never written to (filesystem registry used instead)
 
 **Gaps / bugs:**
-- Inference routes use `g.Authenticate` (requires API key) — dashboard can't call `/v1/chat/completions` without a key
-- Model pull over HTTP blocks with no progress — long downloads timeout
-- Health endpoint hardcodes `"version": "dev"` instead of using build-injected version
 - `solon serve` creates tunnel but never calls `Enable()` — requires separate CLI/API call
 - Website pricing ($9/$19/$49) doesn't match dashboard billing mock ($19/$49/custom)
 
 ---
 
+## Completed
+
+### ~~Sprint 1: Dashboard Polish~~ (v0.2.0) ✓
+> Remove rough edges, make the admin dashboard production-grade
+
+- Model pull progress (SSE): real-time download progress bar with speed + ETA
+- Health version fix: real version in health endpoint and dashboard footer
+- PWA: manifest, icons, service worker, offline indicator
+- Tunnel improvements: `--tunnel` flag, QR code, one-click copy, sidebar status dot
+- Keyboard shortcuts: Ctrl/Cmd+K, Ctrl/Cmd+Shift+S
+
+---
+
 ## Roadmap
 
-### Sprint 1: Chat Experience
-> Make Solon immediately useful the moment you open it
-
-**Goal:** User installs Solon, pulls a model, opens localhost:8420, and starts chatting. No API keys, no setup, just works. Chat is the default landing page.
-
-**Backend:**
-- `internal/gateway/gateway.go` line 64: change `g.Authenticate` → `g.LocalhostOrAuth` on inference routes (safe: remote consumers still need keys, localhost is already trusted for management API)
-
-**Dashboard — new files:**
-| File | Purpose |
-|------|---------|
-| `src/api/streaming.ts` | SSE parser for `/v1/chat/completions` with `stream: true`, rAF token batching |
-| `src/store/chat.ts` | Zustand: conversations, messages, activeId, streaming state, localStorage persistence |
-| `src/hooks/useAutoScroll.ts` | Auto-scroll during streaming, pause on user scroll-up, "scroll to bottom" FAB |
-| `src/hooks/useChatStream.ts` | Orchestrates: POST → stream tokens → store → abort support |
-| `src/components/chat/ChatInput.tsx` | Auto-resize textarea, Enter/Shift+Enter, send/stop button, model selector |
-| `src/components/chat/MessageBubble.tsx` | User (right, brand bg) + assistant (left, card bg) messages |
-| `src/components/chat/MarkdownRenderer.tsx` | `marked` → HTML: paragraphs, lists, bold, code, tables |
-| `src/components/chat/CodeBlock.tsx` | Fenced code: language label, copy button, `highlight.js` syntax coloring |
-| `src/components/chat/MessageList.tsx` | Scrollable container with auto-scroll hook |
-| `src/components/chat/ModelSelector.tsx` | Dropdown from loaded models list |
-| `src/components/chat/ConversationList.tsx` | Sidebar panel: conversations with rename/delete |
-| `src/components/chat/ChatEmptyState.tsx` | Welcome: model name, 4 suggested prompts |
-| `src/components/chat/TypingIndicator.tsx` | Animated dots while waiting for first token |
-| `src/pages/instance/Chat.tsx` | Main page composing all chat components |
-
-**Dashboard — modified files:**
-| File | Change |
-|------|--------|
-| `src/api/types.ts` | Add `ChatMessage`, `Conversation`, `ChatCompletionChunk` types |
-| `src/App.tsx` | Add `/instance/local/chat` + `/instances/:id/chat` routes, default redirect → chat |
-| `src/components/Sidebar.tsx` | Add Chat as first nav item (message-square icon) |
-| `src/index.css` | Prose styles for markdown, code block theming |
-| `package.json` | Add `marked`, `highlight.js` |
-
-**UX spec:**
-- Messages: user right-aligned (brand bg), assistant left-aligned (card bg), full-width markdown
-- Input: auto-resize (1→6 lines), Enter sends, Shift+Enter newline, stop button during stream
-- Streaming: typing indicator → tokens appear smoothly (rAF batching, 60fps), cursor animation at end
-- Code blocks: dark bg in both themes, language label, copy on hover, highlight.js after stream completes
-- Conversations: listed in collapsible panel, auto-title from first message, rename/delete on hover
-- Responsive: mobile full-screen chat, conversation list via hamburger
-
----
-
-### Sprint 2: Polish & Developer Experience
-> Remove rough edges, make it feel production-grade
-
-**Model pull progress (SSE):**
-- `internal/gateway/gateway.go`: change `handlePullModel` to stream progress via SSE (`text/event-stream`)
-- Dashboard Models page: show real-time download progress bar with speed + ETA
-- Progress callback already exists in CLI (`models.Pull` accepts callback) — wire it to HTTP
-
-**Health version fix:**
-- `internal/gateway/gateway.go`: pass build version from `main.go` into Gateway config
-- Health endpoint returns real version, dashboard footer shows it
-
-**PWA:**
-- Already have `vite-plugin-pwa` in devDeps — configure manifest, icons, service worker
-- "Add to Home Screen" on mobile → full-screen chat app
-- Offline indicator when server unreachable
-
-**Tunnel improvements:**
-- Add `--tunnel` flag to `solon serve` → auto-enable Cloudflare tunnel on startup
-- Dashboard Settings page: show tunnel URL, one-click copy, QR code for mobile access
-- Show tunnel status in sidebar footer (green dot when active)
-
-**Keyboard shortcuts:**
-- `Ctrl/Cmd+N`: new conversation
-- `Ctrl/Cmd+K`: model selector
-- `Ctrl/Cmd+Shift+S`: toggle sidebar
-- `/` to focus chat input
-
----
-
-### Sprint 3: Cloud Backend (Cloudflare Workers + D1)
+### Sprint 2: Cloud Backend (Cloudflare Workers + D1)
 > Real cloud platform — user accounts, persistent instance registry, billing
 
 **Architecture:**
@@ -157,7 +97,7 @@ cloud/
 
 ---
 
-### Sprint 4: Relay Tunnel
+### Sprint 3: Relay Tunnel
 > Persistent, reliable tunnel URLs — no more random trycloudflare.com addresses
 
 **Problem:** Cloudflare quick tunnels generate random URLs that change on restart. Users sharing their instance (with team, with apps) need stable URLs.
@@ -179,7 +119,7 @@ Remote client (dashboard, API consumer)
 
 **Solon binary changes:**
 - `internal/tunnel/relay.go`: implement `Enable()` → WebSocket connect to `relay.getsolon.dev`
-- Register instance with cloud backend (requires auth token from Sprint 3)
+- Register instance with cloud backend (requires auth token from Sprint 2)
 - Persistent URL format: `https://{instance-slug}.relay.getsolon.dev`
 - Auto-reconnect with exponential backoff
 - Heartbeat to keep connection alive
@@ -204,7 +144,7 @@ cloud/relay/
 
 ---
 
-### Sprint 5: MLX Backend + Multi-Backend Intelligence
+### Sprint 4: MLX Backend + Multi-Backend Intelligence
 > Native Apple Silicon inference, smart backend selection
 
 **MLX backend (`internal/inference/backends/mlx.go`):**
@@ -220,13 +160,12 @@ cloud/relay/
 - Dashboard Models page: show which backend each model uses, allow switching
 
 **Performance dashboard:**
-- Tokens/sec metric in chat UI (shown subtly after response completes)
 - Model benchmarks page: run standard prompts, compare backends
 - Memory usage display
 
 ---
 
-### Sprint 6: OpenClaw Integration + Agent Features
+### Sprint 5: OpenClaw Integration + Agent Features
 > Multi-model orchestration, tool use, agent workflows
 
 **Wire OpenClaw provider:**
@@ -234,30 +173,44 @@ cloud/relay/
 - Solon appears as a tool provider in OpenClaw agent configs
 - Multi-model routing: different models for different tasks (e.g., small model for classification, large for generation)
 
-**Agent features in chat UI:**
-- Tool/function calling display: show tool invocations as collapsible cards
-- System prompt editor: set per-conversation system messages
-- Temperature/top-p/max-tokens sliders in advanced settings
+---
+
+### Separate Product: Solon Chat (`chat.getsolon.app`)
+> Standalone chat experience — consumer-facing, not an admin tool
+
+Chat was prototyped in the local dashboard (Sprint 1 original) and removed. It's a consumer experience that doesn't belong in an ops dashboard. It will be built as a standalone app.
+
+**Scope:**
+- Standalone React app deployed to `chat.getsolon.app`
+- Connects to any Solon instance (local or remote via tunnel/relay)
+- Streaming chat with markdown rendering, code blocks, syntax highlighting
+- Conversation history (local storage, later cloud-synced)
+- Model selector, system prompt editor, parameter tuning
+- Tool/function calling display for agent workflows
 - Multi-turn conversation export (JSON, markdown)
+- Mobile-first PWA
+
+**Depends on:** Sprint 3 (cloud auth for remote instances), Sprint 3 Relay (for stable URLs)
 
 ---
 
 ## Sprint Timeline
 
 ```
-Sprint 1: Chat Experience ............. Week 1
-Sprint 2: Polish & DX ................ Week 2
-Sprint 3: Cloud Backend .............. Week 3-4
-Sprint 4: Relay Tunnel ............... Week 5
-Sprint 5: MLX + Multi-Backend ........ Week 6
-Sprint 6: OpenClaw + Agents .......... Week 7
+Sprint 1: Dashboard Polish ........... ✓ Done
+Sprint 2: Cloud Backend .............. Week 1-2
+Sprint 3: Relay Tunnel ............... Week 3
+Sprint 4: MLX + Multi-Backend ........ Week 4
+Sprint 5: OpenClaw + Agents .......... Week 5
+Chat App ............................. After Sprint 3
 ```
 
 ## Version Mapping
 
 | Version | Sprints | Milestone |
 |---------|---------|-----------|
-| v0.1.0 | — | Foundation (current, tag when stable) |
-| v0.2.0 | 1 + 2 | Chat + Polish |
-| v0.3.0 | 3 + 4 | Cloud Platform + Relay |
-| v0.4.0 | 5 + 6 | MLX + Agents |
+| v0.1.0 | — | Foundation |
+| v0.2.0 | 1 | Dashboard Polish ✓ |
+| v0.3.0 | 2 + 3 | Cloud Platform + Relay |
+| v0.4.0 | 4 + 5 | MLX + Agents |
+| v0.5.0 | Chat App | Solon Chat at `chat.getsolon.app` |
