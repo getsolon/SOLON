@@ -146,36 +146,3 @@ export interface DownloadProgress {
   percent: number
   message: string
 }
-
-// Chat types
-
-export interface ChatMessage {
-  id: string
-  role: 'user' | 'assistant' | 'system'
-  content: string
-  createdAt: number
-}
-
-export interface Conversation {
-  id: string
-  title: string
-  model: string
-  messages: ChatMessage[]
-  createdAt: number
-  updatedAt: number
-}
-
-export interface ChatCompletionChunk {
-  id: string
-  object: string
-  created: number
-  model: string
-  choices: {
-    index: number
-    delta: {
-      role?: string
-      content?: string
-    }
-    finish_reason: string | null
-  }[]
-}

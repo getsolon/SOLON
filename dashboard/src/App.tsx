@@ -9,7 +9,6 @@ import AuthLayout from './layouts/AuthLayout'
 import AppLayout from './layouts/AppLayout'
 
 // Instance pages (shared between local and remote)
-import Chat from './pages/instance/Chat'
 import Overview from './pages/instance/Overview'
 import Models from './pages/instance/Models'
 import Keys from './pages/instance/Keys'
@@ -49,8 +48,8 @@ function RootRedirect() {
   const mode = useModeStore(s => s.mode)
   const { user } = useAuth()
 
-  if (mode === 'local') return <Navigate to="/instance/local/chat" replace />
-  if (mode === 'hybrid') return <Navigate to="/instance/local/chat" replace />
+  if (mode === 'local') return <Navigate to="/instance/local" replace />
+  if (mode === 'hybrid') return <Navigate to="/instance/local" replace />
   // cloud mode
   if (user) return <Navigate to="/instances" replace />
   return <Navigate to="/login" replace />
@@ -100,7 +99,6 @@ export default function App() {
         <Route path="/" element={<RootRedirect />} />
 
         {/* Local instance routes */}
-        <Route path="/instance/local/chat" element={<RequireLocal><LocalInstanceWrapper><Chat /></LocalInstanceWrapper></RequireLocal>} />
         <Route path="/instance/local" element={<RequireLocal><LocalInstanceWrapper><Overview /></LocalInstanceWrapper></RequireLocal>} />
         <Route path="/instance/local/models" element={<RequireLocal><LocalInstanceWrapper><Models /></LocalInstanceWrapper></RequireLocal>} />
         <Route path="/instance/local/keys" element={<RequireLocal><LocalInstanceWrapper><Keys /></LocalInstanceWrapper></RequireLocal>} />
@@ -111,7 +109,6 @@ export default function App() {
         <Route path="/instances" element={<RequireCloudAuth><Instances /></RequireCloudAuth>} />
         <Route path="/instances/:id" element={<RequireCloudAuth><InstanceDetail /></RequireCloudAuth>}>
           <Route index element={<Overview />} />
-          <Route path="chat" element={<Chat />} />
           <Route path="models" element={<Models />} />
           <Route path="keys" element={<Keys />} />
           <Route path="requests" element={<Requests />} />
