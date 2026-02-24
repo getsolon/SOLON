@@ -1,126 +1,100 @@
-import type { AuthResponse, User, BillingInfo, TeamMember, CloudAPIToken } from './types'
-
-// Mock cloud API — replaced with real backend later
-
-const MOCK_USER: User = {
-  id: 'usr_1',
-  name: 'Demo User',
-  email: 'demo@getsolon.dev',
-  plan: 'pro',
-  created_at: '2025-12-01T00:00:00Z',
-}
-
-const MOCK_TOKEN = 'mock_jwt_token_solon_cloud'
-
-function delay(ms = 300) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+import { cloudFetch, setToken } from './client'
+import type { AuthResponse, User, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
 
 export const cloudAPI = {
-  async login(email: string, _password: string): Promise<AuthResponse> {
-    await delay()
-    return {
-      token: MOCK_TOKEN,
-      user: { ...MOCK_USER, email },
-    }
+  async login(email: string, password: string): Promise<AuthResponse> {
+    const res = await cloudFetch<AuthResponse>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+      credentials: 'include',
+    })
+    setToken(res.token)
+    return res
   },
 
-  async register(name: string, email: string, _password: string): Promise<AuthResponse> {
-    await delay()
-    return {
-      token: MOCK_TOKEN,
-      user: { ...MOCK_USER, id: 'usr_' + Date.now(), name, email },
-    }
+  async register(name: string, email: string, password: string): Promise<AuthResponse> {
+    const res = await cloudFetch<AuthResponse>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+      credentials: 'include',
+    })
+    setToken(res.token)
+    return res
   },
 
   async getProfile(): Promise<User> {
-    await delay(100)
-    return { ...MOCK_USER }
+    return cloudFetch<User>('/profile')
   },
 
   async updateProfile(data: { name?: string; email?: string }): Promise<User> {
-    await delay()
-    return { ...MOCK_USER, ...data }
+    return cloudFetch<User>('/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    })
   },
 
-  async changePassword(_current: string, _newPass: string): Promise<void> {
-    await delay()
+  async changePassword(current: string, newPass: string): Promise<void> {
+    await cloudFetch('/profile/password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: current, new_password: newPass }),
+    })
   },
 
   async getBilling(): Promise<BillingInfo> {
-    await delay(200)
-    return {
-      plan: 'pro',
-      status: 'active',
-      current_period_end: '2026-03-15T00:00:00Z',
-      usage: {
-        instances: { used: 2, limit: 10 },
-        requests: { used: 12847, limit: 100000 },
-        team_members: { used: 1, limit: 1 },
-      },
-      payment_method: {
-        type: 'visa',
-        last4: '4242',
-        exp: '12/27',
-      },
-    }
+    return cloudFetch<BillingInfo>('/billing')
   },
 
   async getTeamMembers(): Promise<TeamMember[]> {
-    await delay(200)
-    return [
-      {
-        id: 'usr_1',
-        name: 'Demo User',
-        email: 'demo@getsolon.dev',
-        role: 'owner',
-        joined_at: '2025-12-01T00:00:00Z',
-        last_active: new Date().toISOString(),
-      },
-    ]
+    return cloudFetch<TeamMember[]>('/team/members')
   },
 
-  async inviteTeamMember(_email: string, _role: 'admin' | 'member'): Promise<TeamMember> {
-    await delay()
-    return {
-      id: 'usr_' + Date.now(),
-      name: 'Invited User',
-      email: _email,
-      role: _role,
-      joined_at: new Date().toISOString(),
-    }
+  async inviteTeamMember(email: string, role: 'admin' | 'member'): Promise<TeamMember> {
+    return cloudFetch<TeamMember>('/team/members', {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    })
   },
 
-  async removeTeamMember(_id: string): Promise<void> {
-    await delay()
+  async removeTeamMember(id: string): Promise<void> {
+    await cloudFetch(`/team/members/${id}`, { method: 'DELETE' })
   },
 
   async getAPITokens(): Promise<CloudAPIToken[]> {
-    await delay(200)
-    return [
-      {
-        id: 'tok_1',
-        name: 'CI/CD Pipeline',
-        prefix: 'sol_cloud_...a1b2',
-        created_at: '2026-01-15T00:00:00Z',
-        last_used: '2026-02-20T14:30:00Z',
-      },
-    ]
+    return cloudFetch<CloudAPIToken[]>('/tokens')
   },
 
-  async createAPIToken(_name: string): Promise<{ token: string; id: string }> {
-    await delay()
-    return {
-      id: 'tok_' + Date.now(),
-      token: 'sol_cloud_' + Math.random().toString(36).slice(2),
-    }
+  async createAPIToken(name: string): Promise<{ token: string; id: string }> {
+    return cloudFetch<{ token: string; id: string }>('/tokens', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
   },
 
-  async revokeAPIToken(_id: string): Promise<void> {
-    await delay()
+  async revokeAPIToken(id: string): Promise<void> {
+    await cloudFetch(`/tokens/${id}`, { method: 'DELETE' })
   },
 
   async deleteAccount(): Promise<void> {
-    await delay()
+    await cloudFetch('/profile', { method: 'DELETE' })
+  },
+
+  // Instance management (cloud mode)
+  async getInstances(): Promise<Instance[]> {
+    return cloudFetch<Instance[]>('/instances')
+  },
+
+  async addInstance(name: string, url: string, apiKey: string): Promise<Instance> {
+    return cloudFetch<Instance>('/instances', {
+      method: 'POST',
+      body: JSON.stringify({ name, url, api_key: apiKey }),
+    })
+  },
+
+  async removeInstance(id: string): Promise<void> {
+    await cloudFetch(`/instances/${id}`, { method: 'DELETE' })
+  },
+
+  async healthCheckInstance(id: string): Promise<{ status: string; version: string | null; models_count: number }> {
+    return cloudFetch(`/instances/${id}/health`, { method: 'POST' })
   },
 }

@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import type { Instance } from '../api/types'
+import { cloudAPI } from '../api/cloud'
+import { getToken } from '../api/client'
 
 const STORAGE_KEY = 'solon-cloud-instances'
 
-function loadInstances(): Instance[] {
+function loadLocal(): Instance[] {
   try {
     return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   } catch {
@@ -11,26 +13,47 @@ function loadInstances(): Instance[] {
   }
 }
 
-function saveInstances(instances: Instance[]) {
+function saveLocal(instances: Instance[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(instances))
+}
+
+function isCloudMode(): boolean {
+  return !!getToken()
 }
 
 interface InstancesState {
   instances: Instance[]
-  load: () => void
-  add: (name: string, url: string, apiKey: string) => Instance
-  remove: (id: string) => void
+  load: () => Promise<void>
+  add: (name: string, url: string, apiKey: string) => Promise<Instance>
+  remove: (id: string) => Promise<void>
   updateStatus: (id: string, status: Instance['status'], version?: string, modelsCount?: number) => void
 }
 
 export const useInstancesStore = create<InstancesState>((set, get) => ({
   instances: [],
 
-  load: () => {
-    set({ instances: loadInstances() })
+  load: async () => {
+    if (isCloudMode()) {
+      try {
+        const instances = await cloudAPI.getInstances()
+        saveLocal(instances) // offline cache
+        set({ instances })
+        return
+      } catch {
+        // Fall back to localStorage cache
+      }
+    }
+    set({ instances: loadLocal() })
   },
 
-  add: (name, url, apiKey) => {
+  add: async (name, url, apiKey) => {
+    if (isCloudMode()) {
+      const instance = await cloudAPI.addInstance(name, url, apiKey)
+      const updated = [...get().instances, instance]
+      saveLocal(updated)
+      set({ instances: updated })
+      return instance
+    }
     const instance: Instance = {
       id: 'inst_' + Date.now(),
       name,
@@ -40,14 +63,17 @@ export const useInstancesStore = create<InstancesState>((set, get) => ({
       added_at: new Date().toISOString(),
     }
     const updated = [...get().instances, instance]
-    saveInstances(updated)
+    saveLocal(updated)
     set({ instances: updated })
     return instance
   },
 
-  remove: (id) => {
+  remove: async (id) => {
+    if (isCloudMode()) {
+      await cloudAPI.removeInstance(id)
+    }
     const updated = get().instances.filter(i => i.id !== id)
-    saveInstances(updated)
+    saveLocal(updated)
     set({ instances: updated })
   },
 
@@ -55,7 +81,7 @@ export const useInstancesStore = create<InstancesState>((set, get) => ({
     const updated = get().instances.map(i =>
       i.id === id ? { ...i, status, version, models_count: modelsCount } : i
     )
-    saveInstances(updated)
+    saveLocal(updated)
     set({ instances: updated })
   },
 }))

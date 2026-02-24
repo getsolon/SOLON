@@ -1,0 +1,16 @@
+name = "solon-cloud-api"
+main = "src/index.ts"
+compatibility_date = "2024-05-29"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "solon-cloud"
+database_id = "placeholder-replace-with-real-id"
+migrations_dir = "migrations"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "placeholder-replace-with-real-id"
+
+[vars]
+ENVIRONMENT = "production"

@@ -27,10 +27,31 @@ export async function fetchJSON<T>(url: string, opts?: RequestInit): Promise<T> 
   return res.json()
 }
 
+let refreshing: Promise<string | null> | null = null
+
+async function tryRefresh(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!res.ok) return null
+    const data = await res.json() as { token?: string }
+    if (data.token) {
+      setToken(data.token)
+      return data.token
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
 export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const token = getToken()
   const res = await fetch(`/api${path}`, {
     ...opts,
+    credentials: opts?.credentials || 'same-origin',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -39,6 +60,26 @@ export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T
   })
 
   if (res.status === 401) {
+    // Try refresh (deduplicate concurrent refresh attempts)
+    if (!refreshing) refreshing = tryRefresh()
+    const newToken = await refreshing
+    refreshing = null
+
+    if (newToken) {
+      // Retry original request with new token
+      const retry = await fetch(`/api${path}`, {
+        ...opts,
+        credentials: opts?.credentials || 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${newToken}`,
+          ...opts?.headers,
+        },
+      })
+      if (retry.ok) return retry.json()
+    }
+
+    // Refresh failed — redirect to login
     clearToken()
     window.location.href = '/login'
     throw new Error('Unauthorized')
