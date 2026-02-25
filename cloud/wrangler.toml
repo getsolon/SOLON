@@ -2,15 +2,19 @@ name = "solon-cloud-api"
 main = "src/index.ts"
 compatibility_date = "2024-05-29"
 
+routes = [
+  { pattern = "api.getsolon.dev/*", zone_id = "ef7817a1391e315927214ae83309f562" }
+]
+
+[vars]
+ENVIRONMENT = "production"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "solon-cloud"
-database_id = "placeholder-replace-with-real-id"
+database_id = "3435c588-d436-4319-94b0-f3fa67d63432"
 migrations_dir = "migrations"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "placeholder-replace-with-real-id"
-
-[vars]
-ENVIRONMENT = "production"
+id = "f35f39cf983f4330a042a78e6616e5a9"
