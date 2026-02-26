@@ -106,9 +106,10 @@ func TestRateLimitMiddleware(t *testing.T) {
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
-		if rec.Code == http.StatusOK {
+		switch rec.Code {
+		case http.StatusOK:
 			okCount++
-		} else if rec.Code == http.StatusTooManyRequests {
+		case http.StatusTooManyRequests:
 			rateLimited++
 		}
 	}

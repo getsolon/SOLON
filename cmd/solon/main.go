@@ -51,7 +51,7 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("opening database: %w", err)
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			// Auto-create admin key on first run
 			hasKeys, err := db.HasKeys()
@@ -353,7 +353,7 @@ func keysCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("opening database: %w", err)
 			}
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			key, err := db.CreateKey(keyName, keyScope)
 			if err != nil {
@@ -384,7 +384,7 @@ func keysCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("opening database: %w", err)
 				}
-				defer db.Close()
+				defer func() { _ = db.Close() }()
 
 				keys, err := db.ListKeys()
 				if err != nil {
@@ -412,7 +412,7 @@ func keysCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("opening database: %w", err)
 				}
-				defer db.Close()
+				defer func() { _ = db.Close() }()
 
 				if err := db.RevokeKey(args[0]); err != nil {
 					return fmt.Errorf("revoking key: %w", err)
