@@ -230,12 +230,12 @@ func TestOpenDefaultPath(t *testing.T) {
 	// Override HOME to temp dir to avoid touching real home
 	dir := t.TempDir()
 	origHome := os.Getenv("HOME")
-	os.Setenv("HOME", dir)
-	defer os.Setenv("HOME", origHome)
+	_ = os.Setenv("HOME", dir)
+	defer func() { _ = os.Setenv("HOME", origHome) }()
 
 	db, err := Open("")
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Should have created ~/.solon/solon.db
 	_, err = os.Stat(filepath.Join(dir, ".solon", "solon.db"))

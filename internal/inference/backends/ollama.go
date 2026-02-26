@@ -95,10 +95,7 @@ func (o *Ollama) completeChat(ctx context.Context, req *CompletionRequest) (*Com
 	}
 
 	for _, m := range req.Messages {
-		ollamaReq.Messages = append(ollamaReq.Messages, ollamaChatMessage{
-			Role:    m.Role,
-			Content: m.Content,
-		})
+		ollamaReq.Messages = append(ollamaReq.Messages, ollamaChatMessage(m))
 	}
 
 	jsonBody, err := json.Marshal(ollamaReq)
@@ -202,10 +199,7 @@ func (o *Ollama) CompleteStream(ctx context.Context, req *CompletionRequest) (<-
 	}
 
 	for _, m := range req.Messages {
-		ollamaReq.Messages = append(ollamaReq.Messages, ollamaChatMessage{
-			Role:    m.Role,
-			Content: m.Content,
-		})
+		ollamaReq.Messages = append(ollamaReq.Messages, ollamaChatMessage(m))
 	}
 
 	jsonBody, err := json.Marshal(ollamaReq)
