@@ -452,19 +452,19 @@ func (g *Gateway) handlePullModel(w http.ResponseWriter, r *http.Request) {
 
 	err := g.engine.PullModel(r.Context(), req.Name, func(p models.DownloadProgress) {
 		data, _ := json.Marshal(p)
-		fmt.Fprintf(w, "data: %s\n\n", data)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
 	})
 
 	if err != nil {
 		data, _ := json.Marshal(map[string]string{"event": "error", "message": err.Error()})
-		fmt.Fprintf(w, "data: %s\n\n", data)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 		flusher.Flush()
 		return
 	}
 
 	data, _ := json.Marshal(map[string]string{"event": "done", "status": "pulled"})
-	fmt.Fprintf(w, "data: %s\n\n", data)
+	_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 	flusher.Flush()
 }
 
@@ -536,7 +536,7 @@ func (g *Gateway) handleTunnelDisable(w http.ResponseWriter, r *http.Request) {
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v)
+	_ = json.NewEncoder(w).Encode(v)
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {

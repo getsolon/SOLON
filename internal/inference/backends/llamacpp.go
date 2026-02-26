@@ -151,7 +151,7 @@ func (l *LlamaCpp) Embeddings(ctx context.Context, req *EmbeddingRequest) (*Embe
 	if err != nil {
 		return nil, fmt.Errorf("creating embedding context: %w", err)
 	}
-	defer embCtx.Close()
+	defer func() { _ = embCtx.Close() }()
 
 	if len(req.Input) == 1 {
 		emb, err := embCtx.GetEmbeddings(req.Input[0])
@@ -213,7 +213,7 @@ func (l *LlamaCpp) loadModelLocked(path, name string) error {
 		llama.WithThreads(runtime.NumCPU()),
 	)
 	if err != nil {
-		model.Close()
+		_ = model.Close()
 		return fmt.Errorf("creating context for %s: %w", name, err)
 	}
 
@@ -228,11 +228,11 @@ func (l *LlamaCpp) loadModelLocked(path, name string) error {
 // unloadLocked frees the current model. Must be called with mu held.
 func (l *LlamaCpp) unloadLocked() {
 	if l.llmCtx != nil {
-		l.llmCtx.Close()
+		_ = l.llmCtx.Close()
 		l.llmCtx = nil
 	}
 	if l.model != nil {
-		l.model.Close()
+		_ = l.model.Close()
 		l.model = nil
 	}
 	l.modelName = ""

@@ -372,7 +372,7 @@ func keysCmd() *cobra.Command {
 	}
 	createCmd.Flags().StringVar(&keyName, "name", "", "Name for the API key")
 	createCmd.Flags().StringVar(&keyScope, "scope", "user", "Key scope: 'admin' or 'user'")
-	createCmd.MarkFlagRequired("name")
+	_ = createCmd.MarkFlagRequired("name")
 
 	cmd.AddCommand(
 		createCmd,
@@ -499,7 +499,7 @@ func statusCmd() *cobra.Command {
 				Status  string `json:"status"`
 				Version string `json:"version"`
 			}
-			json.NewDecoder(resp.Body).Decode(&health)
+			_ = json.NewDecoder(resp.Body).Decode(&health)
 
 			fmt.Println("Status:  running")
 			fmt.Printf("Port:    %d\n", port)
