@@ -191,7 +191,7 @@ func TestKeyBcrypt(t *testing.T) {
 	// Raw key should not be stored in the database
 	rows, err := db.db.Query(`SELECT hash FROM api_keys WHERE id = ?`, key.ID)
 	require.NoError(t, err)
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var hash string
 	require.True(t, rows.Next())

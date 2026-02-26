@@ -52,7 +52,7 @@ func (d *DB) GetRequestLog(limit int) ([]RequestLog, error) {
 	if err != nil {
 		return nil, fmt.Errorf("querying request log: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var logs []RequestLog
 	for rows.Next() {
@@ -83,17 +83,17 @@ func (d *DB) GetUsageStats() (*UsageStats, error) {
 	}
 
 	// Requests today
-	d.db.QueryRow(
+	_ = d.db.QueryRow(
 		`SELECT COUNT(*) FROM requests WHERE created_at >= date('now')`,
 	).Scan(&stats.RequestsToday)
 
 	// Unique keys used
-	d.db.QueryRow(
+	_ = d.db.QueryRow(
 		`SELECT COUNT(DISTINCT key_id) FROM requests`,
 	).Scan(&stats.UniqueKeysUsed)
 
 	// Most used model
-	d.db.QueryRow(
+	_ = d.db.QueryRow(
 		`SELECT model FROM requests WHERE model IS NOT NULL AND model != '' GROUP BY model ORDER BY COUNT(*) DESC LIMIT 1`,
 	).Scan(&stats.MostUsedModel)
 

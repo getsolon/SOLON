@@ -73,9 +73,9 @@ func TestGetUsageStats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Log some requests
-	db.LogRequest(key.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 100, 50, 200, 200)
-	db.LogRequest(key.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 200, 100, 400, 200)
-	db.LogRequest(key.ID, "POST", "/v1/embeddings", "nomic-embed-text", 50, 0, 50, 200)
+	_ = db.LogRequest(key.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 100, 50, 200, 200)
+	_ = db.LogRequest(key.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 200, 100, 400, 200)
+	_ = db.LogRequest(key.ID, "POST", "/v1/embeddings", "nomic-embed-text", 50, 0, 50, 200)
 
 	stats, err = db.GetUsageStats()
 	require.NoError(t, err)
@@ -94,8 +94,8 @@ func TestGetUsageStatsMultipleKeys(t *testing.T) {
 	key1, _ := db.CreateKey("key-1", "user")
 	key2, _ := db.CreateKey("key-2", "user")
 
-	db.LogRequest(key1.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 10, 5, 100, 200)
-	db.LogRequest(key2.ID, "POST", "/v1/chat/completions", "mistral:7b", 20, 10, 150, 200)
+	_ = db.LogRequest(key1.ID, "POST", "/v1/chat/completions", "llama3.2:8b", 10, 5, 100, 200)
+	_ = db.LogRequest(key2.ID, "POST", "/v1/chat/completions", "mistral:7b", 20, 10, 150, 200)
 
 	stats, err := db.GetUsageStats()
 	require.NoError(t, err)

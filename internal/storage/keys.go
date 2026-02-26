@@ -80,7 +80,7 @@ func (d *DB) ValidateKey(rawKey string) (*APIKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("querying keys: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var key APIKey
@@ -95,7 +95,7 @@ func (d *DB) ValidateKey(rawKey string) (*APIKey, error) {
 		// bcrypt-compare the raw key against the stored hash
 		if err := bcrypt.CompareHashAndPassword([]byte(key.Hash), []byte(rawKey)); err == nil {
 			// Update last_used timestamp
-			d.db.Exec(`UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE id = ?`, key.ID)
+			_, _ = d.db.Exec(`UPDATE api_keys SET last_used = CURRENT_TIMESTAMP WHERE id = ?`, key.ID)
 			return &key, nil
 		}
 	}
@@ -111,7 +111,7 @@ func (d *DB) ListKeys() ([]APIKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("querying keys: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var keys []APIKey
 	for rows.Next() {
