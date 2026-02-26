@@ -37,7 +37,7 @@ func DownloadModel(ctx context.Context, repo, fileFilter, blobsDir string, progr
 	if err != nil {
 		return nil, fmt.Errorf("creating temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	job := hfdownloader.Job{
 		Repo:    repo,
@@ -123,14 +123,14 @@ func DownloadModel(ctx context.Context, repo, fileFilter, blobsDir string, progr
 	blobPath := filepath.Join(blobsDir, blobName)
 
 	// If blob already exists (same model re-pulled), remove it first
-	os.Remove(blobPath)
+	_ = os.Remove(blobPath)
 
 	if err := os.Rename(ggufPath, blobPath); err != nil {
 		// Cross-device rename fallback: copy then delete
 		if err := copyFile(ggufPath, blobPath); err != nil {
 			return nil, fmt.Errorf("moving GGUF to blobs: %w", err)
 		}
-		os.Remove(ggufPath)
+		_ = os.Remove(ggufPath)
 	}
 
 	return &DownloadResult{
@@ -169,7 +169,7 @@ func fileSHA256(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -183,7 +183,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {

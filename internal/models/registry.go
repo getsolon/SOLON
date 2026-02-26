@@ -176,10 +176,10 @@ func (r *Registry) Remove(name string) error {
 
 	// Remove blob
 	blobPath := filepath.Join(r.modelsDir, m.Path)
-	os.Remove(blobPath)
+	_ = os.Remove(blobPath)
 
 	// Remove manifest
-	os.Remove(manifestPath)
+	_ = os.Remove(manifestPath)
 
 	return nil
 }
@@ -215,7 +215,7 @@ func (r *Registry) AddCustomMapping(name string, source ModelSource) error {
 	// Load existing custom mappings
 	custom := make(map[string]ModelSource)
 	if data, err := os.ReadFile(r.customFile); err == nil {
-		json.Unmarshal(data, &custom)
+		_ = json.Unmarshal(data, &custom)
 	}
 
 	custom[name] = source

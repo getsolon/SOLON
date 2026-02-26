@@ -45,7 +45,7 @@ func (o *Ollama) Available() bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return resp.StatusCode == http.StatusOK
 }
 
@@ -72,7 +72,7 @@ func (o *Ollama) UnloadModel(ctx context.Context, model *Model) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	return nil
 }
 
@@ -116,7 +116,7 @@ func (o *Ollama) completeChat(ctx context.Context, req *CompletionRequest) (*Com
 	if err != nil {
 		return nil, fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -164,7 +164,7 @@ func (o *Ollama) completeGenerate(ctx context.Context, req *CompletionRequest) (
 	if err != nil {
 		return nil, fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -226,7 +226,7 @@ func (o *Ollama) CompleteStream(ctx context.Context, req *CompletionRequest) (<-
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 		return nil, fmt.Errorf("Ollama returned %d: %s", resp.StatusCode, string(body))
 	}
 
@@ -235,7 +235,7 @@ func (o *Ollama) CompleteStream(ctx context.Context, req *CompletionRequest) (<-
 
 	go func() {
 		defer close(ch)
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 
 		decoder := json.NewDecoder(resp.Body)
 		for decoder.More() {
@@ -283,7 +283,7 @@ func (o *Ollama) Embeddings(ctx context.Context, req *EmbeddingRequest) (*Embedd
 	if err != nil {
 		return nil, fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -315,7 +315,7 @@ func (o *Ollama) ListModels(ctx context.Context) ([]OllamaModelInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var result struct {
 		Models []OllamaModelInfo `json:"models"`
@@ -345,7 +345,7 @@ func (o *Ollama) PullModel(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -370,7 +370,7 @@ func (o *Ollama) DeleteModel(ctx context.Context, name string) error {
 	if err != nil {
 		return fmt.Errorf("calling Ollama: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)

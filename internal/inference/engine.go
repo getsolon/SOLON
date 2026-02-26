@@ -45,7 +45,7 @@ func NewEngine() (*Engine, error) {
 	modelsDir := ""
 	if dataDir, err := models.DataDir(); err == nil {
 		modelsDir = filepath.Join(dataDir, "models", "blobs")
-		os.MkdirAll(modelsDir, 0755)
+		_ = os.MkdirAll(modelsDir, 0755)
 	}
 	llamacpp := backends.NewLlamaCpp(modelsDir)
 	if llamacpp.Available() {
@@ -74,7 +74,7 @@ func (e *Engine) Close() error {
 
 	if e.activeModel != nil {
 		for _, b := range e.backends {
-			b.UnloadModel(context.Background(), e.activeModel)
+			_ = b.UnloadModel(context.Background(), e.activeModel)
 		}
 		e.activeModel = nil
 	}

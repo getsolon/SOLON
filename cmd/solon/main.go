@@ -493,7 +493,7 @@ func statusCmd() *cobra.Command {
 				fmt.Printf("Port:    %d\n", port)
 				return nil
 			}
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			var health struct {
 				Status  string `json:"status"`
