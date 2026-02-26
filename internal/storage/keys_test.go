@@ -14,7 +14,7 @@ func testDB(t *testing.T) *DB {
 	dir := t.TempDir()
 	db, err := Open(filepath.Join(dir, "test.db"))
 	require.NoError(t, err)
-	t.Cleanup(func() { db.Close() })
+	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
 
@@ -67,7 +67,7 @@ func TestValidateKey(t *testing.T) {
 		{
 			name: "invalid key",
 			setup: func(db *DB) string {
-				db.CreateKey("test", "user")
+				_, _ = db.CreateKey("test", "user")
 				return ""
 			},
 			rawKey:  func(_ string) string { return "sol_sk_live_invalid_key_value" },
@@ -85,7 +85,7 @@ func TestValidateKey(t *testing.T) {
 			name: "revoked key",
 			setup: func(db *DB) string {
 				key, _ := db.CreateKey("revoked", "user")
-				db.RevokeKey(key.ID)
+				_ = db.RevokeKey(key.ID)
 				return key.Raw
 			},
 			rawKey:  func(raw string) string { return raw },
@@ -168,15 +168,15 @@ func TestListKeys(t *testing.T) {
 	assert.Empty(t, keys)
 
 	// Create some keys
-	db.CreateKey("key-1", "user")
-	db.CreateKey("key-2", "admin")
+	_, _ = db.CreateKey("key-1", "user")
+	_, _ = db.CreateKey("key-2", "admin")
 
 	keys, err = db.ListKeys()
 	require.NoError(t, err)
 	assert.Len(t, keys, 2)
 
 	// Revoke one — shouldn't show in list
-	db.RevokeKey(keys[0].ID)
+	_ = db.RevokeKey(keys[0].ID)
 	keys, err = db.ListKeys()
 	require.NoError(t, err)
 	assert.Len(t, keys, 1)
