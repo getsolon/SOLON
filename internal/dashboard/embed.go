@@ -21,7 +21,7 @@ func Handler() http.Handler {
 		// If dist doesn't exist yet (pre-build), serve a placeholder
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/html")
-			w.Write([]byte("<html><body><h1>Solon Dashboard</h1><p>Dashboard not yet built. Run <code>make build-dashboard</code>.</p></body></html>"))
+			_, _ = w.Write([]byte("<html><body><h1>Solon Dashboard</h1><p>Dashboard not yet built. Run <code>make build-dashboard</code>.</p></body></html>"))
 		})
 	}
 
@@ -36,7 +36,7 @@ func Handler() http.Handler {
 
 		// Check if the file exists in the embedded FS
 		if f, err := dist.Open(path); err == nil {
-			f.Close()
+			_ = f.Close()
 			fileServer.ServeHTTP(w, r)
 			return
 		}

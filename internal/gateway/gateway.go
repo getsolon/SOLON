@@ -141,7 +141,7 @@ func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 
 	// Log request
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
-		g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
+		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
 			int(time.Since(start).Milliseconds()), http.StatusOK)
 	}
@@ -200,16 +200,16 @@ func (g *Gateway) handleChatCompletionsStream(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		fmt.Fprintf(w, "data: %s\n\n", jsonData)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", jsonData)
 		flusher.Flush()
 	}
 
-	fmt.Fprint(w, "data: [DONE]\n\n")
+	_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 	flusher.Flush()
 
 	// Log request
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
-		g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
+		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			0, totalCompletion, int(time.Since(start).Milliseconds()), http.StatusOK)
 	}
 }
@@ -236,7 +236,7 @@ func (g *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
-		g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
+		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
 			int(time.Since(start).Milliseconds()), http.StatusOK)
 	}
@@ -288,7 +288,7 @@ func (g *Gateway) handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
-		g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
+		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, 0,
 			int(time.Since(start).Milliseconds()), http.StatusOK)
 	}

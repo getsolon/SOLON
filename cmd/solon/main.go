@@ -76,7 +76,7 @@ func serveCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("starting inference engine: %w", err)
 			}
-			defer engine.Close()
+			defer func() { _ = engine.Close() }()
 
 			t := tunnel.NewCloudflare(port)
 
@@ -143,7 +143,7 @@ func modelsPullCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("starting engine: %w", err)
 			}
-			defer engine.Close()
+			defer func() { _ = engine.Close() }()
 
 			fmt.Printf("Pulling model %s...\n", name)
 
@@ -182,7 +182,7 @@ func modelsListCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("starting engine: %w", err)
 			}
-			defer engine.Close()
+			defer func() { _ = engine.Close() }()
 
 			models, err := engine.ListModels(cmd.Context())
 			if err != nil {
@@ -220,7 +220,7 @@ func modelsRemoveCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("starting engine: %w", err)
 			}
-			defer engine.Close()
+			defer func() { _ = engine.Close() }()
 
 			fmt.Printf("Removing model %s...\n", args[0])
 			if err := engine.RemoveModel(cmd.Context(), args[0]); err != nil {
@@ -243,7 +243,7 @@ func modelsInfoCmd() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("starting engine: %w", err)
 			}
-			defer engine.Close()
+			defer func() { _ = engine.Close() }()
 
 			info, err := engine.GetModelInfo(cmd.Context(), args[0])
 			if err != nil {
