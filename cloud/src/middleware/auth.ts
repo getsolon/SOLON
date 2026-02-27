@@ -7,6 +7,7 @@ import { unauthorized } from '../lib/errors'
 type Variables = {
   userId: string
   userPlan: string
+  userRole: string
 }
 
 export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Variables }>(async (c, next) => {
@@ -19,10 +20,10 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Varia
   if (token.startsWith('sol_cloud_')) {
     const hash = await sha256(token)
     const row = await c.env.DB.prepare(
-      'SELECT t.user_id, u.plan FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?',
+      'SELECT t.user_id, u.plan, u.role FROM api_tokens t JOIN users u ON u.id = t.user_id WHERE t.token_hash = ?',
     )
       .bind(hash)
-      .first<{ user_id: string; plan: string }>()
+      .first<{ user_id: string; plan: string; role: string }>()
 
     if (!row) throw unauthorized('Invalid API token')
 
@@ -31,6 +32,7 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Varia
 
     c.set('userId', row.user_id)
     c.set('userPlan', row.plan)
+    c.set('userRole', row.role)
     return next()
   }
 
@@ -44,5 +46,6 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Varia
 
   c.set('userId', payload.sub)
   c.set('userPlan', payload.plan)
+  c.set('userRole', payload.role || 'waitlisted')
   return next()
 })

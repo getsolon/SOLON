@@ -6,8 +6,7 @@ import { cloudAPI } from '../api/cloud'
 interface AuthState {
   user: User | null
   loading: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string) => Promise<void>
+  setUserFromToken: (token: string) => Promise<void>
   logout: () => void
   loadUser: () => Promise<void>
 }
@@ -16,16 +15,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
 
-  login: async (email, password) => {
-    const res = await cloudAPI.login(email, password)
-    setToken(res.token)
-    set({ user: res.user })
-  },
-
-  register: async (name, email, password) => {
-    const res = await cloudAPI.register(name, email, password)
-    setToken(res.token)
-    set({ user: res.user })
+  setUserFromToken: async (token) => {
+    setToken(token)
+    const user = await cloudAPI.getProfile()
+    set({ user })
   },
 
   logout: () => {

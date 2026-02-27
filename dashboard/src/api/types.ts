@@ -5,6 +5,9 @@ export interface User {
   name: string
   email: string
   plan: 'free' | 'pro' | 'team' | 'enterprise'
+  avatar_url: string | null
+  role: 'admin' | 'user' | 'waitlisted'
+  provider: 'github' | 'google' | null
   created_at: string
 }
 

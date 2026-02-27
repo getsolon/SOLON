@@ -17,7 +17,8 @@ import InstanceSettings from './pages/instance/InstanceSettings'
 
 // Cloud pages
 import Login from './pages/cloud/Login'
-import Register from './pages/cloud/Register'
+import AuthCallback from './pages/cloud/AuthCallback'
+import Waitlisted from './pages/cloud/Waitlisted'
 import Instances from './pages/cloud/Instances'
 import InstanceDetail from './pages/cloud/InstanceDetail'
 import Billing from './pages/cloud/Billing'
@@ -33,6 +34,7 @@ function RequireLocal({ children }: { children: React.ReactNode }) {
 function RequireCloudAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
+  if (user.role === 'waitlisted') return <Navigate to="/waitlisted" replace />
   return <>{children}</>
 }
 
@@ -51,7 +53,10 @@ function RootRedirect() {
   if (mode === 'local') return <Navigate to="/instance/local" replace />
   if (mode === 'hybrid') return <Navigate to="/instance/local" replace />
   // cloud mode
-  if (user) return <Navigate to="/instances" replace />
+  if (user) {
+    if (user.role === 'waitlisted') return <Navigate to="/waitlisted" replace />
+    return <Navigate to="/instances" replace />
+  }
   return <Navigate to="/login" replace />
 }
 
@@ -87,10 +92,15 @@ export default function App() {
 
   return (
     <Routes>
+      {/* OAuth callback (no layout — handles token and redirects) */}
+      <Route path="/auth/callback" element={<AuthCallback />} />
+
+      {/* Waitlisted page (standalone — no app layout) */}
+      <Route path="/waitlisted" element={<Waitlisted />} />
+
       {/* Auth routes (cloud-only) */}
       <Route element={<RequireGuest><AuthLayout /></RequireGuest>}>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
       </Route>
 
       {/* App routes */}

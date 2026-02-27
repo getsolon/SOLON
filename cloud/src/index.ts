@@ -3,6 +3,7 @@ import { cors } from 'hono/cors'
 import type { Env } from './types'
 import { AppError } from './lib/errors'
 import { authMiddleware } from './middleware/auth'
+import { requireRole } from './middleware/requireRole'
 import { rateLimitMiddleware } from './middleware/rateLimit'
 import authRoutes from './routes/auth'
 import profileRoutes from './routes/profile'
@@ -13,7 +14,7 @@ import billingRoutes from './routes/billing'
 
 const app = new Hono<{ Bindings: Env }>()
 
-// CORS for local dev
+// CORS
 app.use('/api/*', cors({
   origin: ['http://localhost:5173', 'https://app.getsolon.dev'],
   credentials: true,
@@ -32,14 +33,22 @@ app.onError((err, c) => {
 app.route('/api/auth', authRoutes)
 
 // Authed routes
-const authed = new Hono<{ Bindings: Env; Variables: { userId: string; userPlan: string } }>()
+const authed = new Hono<{ Bindings: Env; Variables: { userId: string; userPlan: string; userRole: string } }>()
 authed.use('*', authMiddleware)
 authed.use('*', rateLimitMiddleware)
+
+// Profile is accessible to all authed users (including waitlisted — they need to see their status)
 authed.route('/profile', profileRoutes)
-authed.route('/instances', instanceRoutes)
-authed.route('/tokens', tokenRoutes)
-authed.route('/team', teamRoutes)
-authed.route('/billing', billingRoutes)
+
+// Protected routes require admin or user role (not waitlisted)
+const protected_ = new Hono<{ Bindings: Env; Variables: { userId: string; userPlan: string; userRole: string } }>()
+protected_.use('*', requireRole('admin', 'user'))
+protected_.route('/instances', instanceRoutes)
+protected_.route('/tokens', tokenRoutes)
+protected_.route('/team', teamRoutes)
+protected_.route('/billing', billingRoutes)
+
+authed.route('/', protected_)
 
 app.route('/api', authed)
 

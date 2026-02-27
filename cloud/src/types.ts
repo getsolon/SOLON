@@ -3,6 +3,13 @@ export interface Env {
   KV: KVNamespace
   JWT_SECRET: string
   ENCRYPTION_KEY: string
+  GITHUB_CLIENT_ID: string
+  GITHUB_CLIENT_SECRET: string
+  GOOGLE_CLIENT_ID: string
+  GOOGLE_CLIENT_SECRET: string
+  ADMIN_GITHUB_ID: string
+  ADMIN_EMAIL: string
+  DASHBOARD_URL: string
 }
 
 export interface UserRow {
@@ -11,6 +18,10 @@ export interface UserRow {
   email: string
   password: string
   plan: string
+  github_id: string | null
+  google_id: string | null
+  avatar_url: string | null
+  role: string
   created_at: string
   updated_at: string
 }
@@ -68,6 +79,7 @@ export interface TeamMemberRow {
 export interface JWTPayload {
   sub: string
   plan: string
+  role: string
   iat: number
   exp: number
 }

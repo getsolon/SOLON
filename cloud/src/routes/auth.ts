@@ -1,9 +1,19 @@
 import { Hono } from 'hono'
 import type { Env, UserRow } from '../types'
-import { hashPassword, verifyPassword, sha256 } from '../lib/password'
+import { sha256 } from '../lib/password'
 import { signJWT } from '../lib/jwt'
 import { userId, refreshTokenId } from '../lib/id'
-import { badRequest, unauthorized, conflict } from '../lib/errors'
+import { badRequest, unauthorized } from '../lib/errors'
+import {
+  generateState,
+  githubAuthURL,
+  exchangeGitHubCode,
+  fetchGitHubProfile,
+  googleAuthURL,
+  exchangeGoogleCode,
+  fetchGoogleProfile,
+  type OAuthUserProfile,
+} from '../lib/oauth'
 
 const auth = new Hono<{ Bindings: Env }>()
 
@@ -13,6 +23,8 @@ function userResponse(row: UserRow) {
     name: row.name,
     email: row.email,
     plan: row.plan,
+    avatar_url: row.avatar_url,
+    role: row.role,
     created_at: row.created_at,
   }
 }
@@ -22,6 +34,7 @@ async function generateTokens(user: UserRow, env: Env) {
     {
       sub: user.id,
       plan: user.plan,
+      role: user.role,
       iat: Math.floor(Date.now() / 1000),
       exp: Math.floor(Date.now() / 1000) + 15 * 60, // 15 min
     },
@@ -46,60 +59,151 @@ async function generateTokens(user: UserRow, env: Env) {
 
 function setRefreshCookie(refreshToken: string): string {
   const maxAge = 30 * 24 * 60 * 60 // 30 days
-  return `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=${maxAge}`
+  return `refresh_token=${refreshToken}; HttpOnly; Secure; SameSite=Lax; Domain=.getsolon.dev; Path=/api/auth; Max-Age=${maxAge}`
 }
 
 function clearRefreshCookie(): string {
-  return 'refresh_token=; HttpOnly; Secure; SameSite=Strict; Path=/api/auth; Max-Age=0'
+  return 'refresh_token=; HttpOnly; Secure; SameSite=Lax; Domain=.getsolon.dev; Path=/api/auth; Max-Age=0'
 }
 
-// POST /auth/register
-auth.post('/register', async (c) => {
-  const body = await c.req.json<{ name?: string; email?: string; password?: string }>()
-  if (!body.name || !body.email || !body.password) throw badRequest('name, email, and password are required')
-  if (body.password.length < 8) throw badRequest('Password must be at least 8 characters')
+function determineRole(
+  provider: 'github' | 'google',
+  profile: OAuthUserProfile,
+  env: Env,
+): string {
+  if (provider === 'github' && profile.id === env.ADMIN_GITHUB_ID) return 'admin'
+  if (provider === 'google' && profile.email && profile.email === env.ADMIN_EMAIL) return 'admin'
+  return 'waitlisted'
+}
 
-  const email = body.email.toLowerCase().trim()
-  const existing = await c.env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first()
-  if (existing) throw conflict('Email already registered')
+async function handleOAuthCallback(
+  provider: 'github' | 'google',
+  profile: OAuthUserProfile,
+  env: Env,
+): Promise<{ user: UserRow; accessToken: string; refreshToken: string }> {
+  const providerIdCol = provider === 'github' ? 'github_id' : 'google_id'
 
-  const id = userId()
-  const hash = await hashPassword(body.password)
-  const now = new Date().toISOString()
+  // Check for existing user by provider ID
+  let user = await env.DB.prepare(`SELECT * FROM users WHERE ${providerIdCol} = ?`)
+    .bind(profile.id)
+    .first<UserRow>()
 
-  await c.env.DB.prepare('INSERT INTO users (id, name, email, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(id, body.name.trim(), email, hash, now, now)
-    .run()
+  if (user) {
+    // Update profile on each login
+    await env.DB.prepare(
+      `UPDATE users SET name = ?, avatar_url = ?, updated_at = datetime('now') WHERE id = ?`,
+    )
+      .bind(profile.name, profile.avatar_url, user.id)
+      .run()
+    user = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>())!
+  } else {
+    // Check if user exists by email (link accounts)
+    if (profile.email) {
+      user = await env.DB.prepare('SELECT * FROM users WHERE email = ?')
+        .bind(profile.email.toLowerCase())
+        .first<UserRow>()
+    }
 
-  const user = (await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>())!
-  const { accessToken, refreshToken } = await generateTokens(user, c.env)
+    if (user) {
+      // Link this provider to existing email-matched user
+      await env.DB.prepare(
+        `UPDATE users SET ${providerIdCol} = ?, avatar_url = ?, updated_at = datetime('now') WHERE id = ?`,
+      )
+        .bind(profile.id, profile.avatar_url, user.id)
+        .run()
+      user = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>())!
+    } else {
+      // Create new user
+      const id = userId()
+      const role = determineRole(provider, profile, env)
+      const now = new Date().toISOString()
 
-  return c.json(
-    { token: accessToken, user: userResponse(user) },
-    201,
-    { 'Set-Cookie': setRefreshCookie(refreshToken) },
-  )
+      await env.DB.prepare(
+        `INSERT INTO users (id, name, email, password, ${providerIdCol}, avatar_url, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+        .bind(id, profile.name, profile.email?.toLowerCase() || '', 'oauth_no_password', profile.id, profile.avatar_url, role, now, now)
+        .run()
+
+      user = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>())!
+    }
+  }
+
+  const { accessToken, refreshToken } = await generateTokens(user, env)
+  return { user, accessToken, refreshToken }
+}
+
+// GET /auth/github — redirect to GitHub OAuth
+auth.get('/github', async (c) => {
+  const state = generateState()
+  await c.env.KV.put(`oauth_state:${state}`, 'github', { expirationTtl: 300 })
+
+  const url = githubAuthURL(c.env.GITHUB_CLIENT_ID, state)
+  return c.redirect(url)
 })
 
-// POST /auth/login
-auth.post('/login', async (c) => {
-  const body = await c.req.json<{ email?: string; password?: string }>()
-  if (!body.email || !body.password) throw badRequest('email and password are required')
+// GET /auth/google — redirect to Google OAuth
+auth.get('/google', async (c) => {
+  const state = generateState()
+  await c.env.KV.put(`oauth_state:${state}`, 'google', { expirationTtl: 300 })
 
-  const email = body.email.toLowerCase().trim()
-  const user = await c.env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<UserRow>()
-  if (!user) throw unauthorized('Invalid email or password')
+  const callbackUrl = new URL('/api/auth/callback/google', c.req.url).toString()
+  const url = googleAuthURL(c.env.GOOGLE_CLIENT_ID, callbackUrl, state)
+  return c.redirect(url)
+})
 
-  const valid = await verifyPassword(body.password, user.password)
-  if (!valid) throw unauthorized('Invalid email or password')
+// GET /auth/callback/github — GitHub OAuth callback
+auth.get('/callback/github', async (c) => {
+  const code = c.req.query('code')
+  const state = c.req.query('state')
+  if (!code || !state) throw badRequest('Missing code or state')
 
-  const { accessToken, refreshToken } = await generateTokens(user, c.env)
+  // Verify CSRF state
+  const stored = await c.env.KV.get(`oauth_state:${state}`)
+  if (stored !== 'github') throw badRequest('Invalid or expired state')
+  await c.env.KV.delete(`oauth_state:${state}`)
 
-  return c.json(
-    { token: accessToken, user: userResponse(user) },
-    200,
-    { 'Set-Cookie': setRefreshCookie(refreshToken) },
-  )
+  const accessToken = await exchangeGitHubCode(code, c.env.GITHUB_CLIENT_ID, c.env.GITHUB_CLIENT_SECRET)
+  const profile = await fetchGitHubProfile(accessToken)
+  const result = await handleOAuthCallback('github', profile, c.env)
+
+  const dashboardUrl = c.env.DASHBOARD_URL || 'https://app.getsolon.dev'
+  const redirectUrl = `${dashboardUrl}/auth/callback?token=${result.accessToken}`
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: redirectUrl,
+      'Set-Cookie': setRefreshCookie(result.refreshToken),
+    },
+  })
+})
+
+// GET /auth/callback/google — Google OAuth callback
+auth.get('/callback/google', async (c) => {
+  const code = c.req.query('code')
+  const state = c.req.query('state')
+  if (!code || !state) throw badRequest('Missing code or state')
+
+  // Verify CSRF state
+  const stored = await c.env.KV.get(`oauth_state:${state}`)
+  if (stored !== 'google') throw badRequest('Invalid or expired state')
+  await c.env.KV.delete(`oauth_state:${state}`)
+
+  const callbackUrl = new URL('/api/auth/callback/google', c.req.url).toString()
+  const oauthToken = await exchangeGoogleCode(code, c.env.GOOGLE_CLIENT_ID, c.env.GOOGLE_CLIENT_SECRET, callbackUrl)
+  const profile = await fetchGoogleProfile(oauthToken)
+  const result = await handleOAuthCallback('google', profile, c.env)
+
+  const dashboardUrl = c.env.DASHBOARD_URL || 'https://app.getsolon.dev'
+  const redirectUrl = `${dashboardUrl}/auth/callback?token=${result.accessToken}`
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: redirectUrl,
+      'Set-Cookie': setRefreshCookie(result.refreshToken),
+    },
+  })
 })
 
 // POST /auth/refresh

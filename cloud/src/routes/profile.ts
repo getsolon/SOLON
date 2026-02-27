@@ -1,9 +1,8 @@
 import { Hono } from 'hono'
 import type { Env, UserRow } from '../types'
-import { hashPassword, verifyPassword } from '../lib/password'
-import { badRequest, notFound, unauthorized, conflict } from '../lib/errors'
+import { badRequest, notFound, conflict } from '../lib/errors'
 
-type Variables = { userId: string; userPlan: string }
+type Variables = { userId: string; userPlan: string; userRole: string }
 
 const profile = new Hono<{ Bindings: Env; Variables: Variables }>()
 
@@ -13,6 +12,9 @@ function userResponse(row: UserRow) {
     name: row.name,
     email: row.email,
     plan: row.plan,
+    avatar_url: row.avatar_url,
+    role: row.role,
+    provider: row.github_id ? 'github' : row.google_id ? 'google' : null,
     created_at: row.created_at,
   }
 }
@@ -54,25 +56,6 @@ profile.patch('/', async (c) => {
 
   const user = (await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<UserRow>())!
   return c.json(userResponse(user))
-})
-
-// POST /profile/password
-profile.post('/password', async (c) => {
-  const userId = c.get('userId')
-  const body = await c.req.json<{ current_password?: string; new_password?: string }>()
-  if (!body.current_password || !body.new_password) throw badRequest('current_password and new_password are required')
-  if (body.new_password.length < 8) throw badRequest('New password must be at least 8 characters')
-
-  const user = await c.env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(userId).first<UserRow>()
-  if (!user) throw notFound('User not found')
-
-  const valid = await verifyPassword(body.current_password, user.password)
-  if (!valid) throw unauthorized('Current password is incorrect')
-
-  const hash = await hashPassword(body.new_password)
-  await c.env.DB.prepare("UPDATE users SET password = ?, updated_at = datetime('now') WHERE id = ?").bind(hash, userId).run()
-
-  return c.json({ ok: true })
 })
 
 // DELETE /profile

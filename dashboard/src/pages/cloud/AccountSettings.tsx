@@ -18,11 +18,6 @@ export default function AccountSettings() {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMsg, setProfileMsg] = useState('')
 
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [pwSaving, setPwSaving] = useState(false)
-  const [pwMsg, setPwMsg] = useState('')
-
   const [tokens, setTokens] = useState<CloudAPIToken[]>([])
   const [newTokenName, setNewTokenName] = useState('')
   const [createdToken, setCreatedToken] = useState('')
@@ -42,23 +37,6 @@ export default function AccountSettings() {
       setProfileMsg((err as Error).message)
     } finally {
       setProfileSaving(false)
-    }
-  }
-
-  async function handlePasswordChange(e: React.FormEvent) {
-    e.preventDefault()
-    if (newPw.length < 8) { setPwMsg('Password must be at least 8 characters'); return }
-    setPwSaving(true)
-    setPwMsg('')
-    try {
-      await cloudAPI.changePassword(currentPw, newPw)
-      setPwMsg('Password changed')
-      setCurrentPw('')
-      setNewPw('')
-    } catch (err) {
-      setPwMsg((err as Error).message)
-    } finally {
-      setPwSaving(false)
     }
   }
 
@@ -83,6 +61,8 @@ export default function AccountSettings() {
     navigate('/login')
   }
 
+  const providerLabel = user?.provider === 'github' ? 'GitHub' : user?.provider === 'google' ? 'Google' : null
+
   return (
     <>
       <TopBar title="Settings" />
@@ -92,21 +72,17 @@ export default function AccountSettings() {
           <form onSubmit={handleProfileSave} className="space-y-4">
             <Input label="Name" value={name} onChange={e => setName(e.target.value)} required />
             <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            {providerLabel && (
+              <p className="text-sm text-[var(--text-tertiary)]">
+                Connected via {providerLabel}
+                {user?.avatar_url && (
+                  <img src={user.avatar_url} alt="" className="inline-block w-5 h-5 rounded-full ml-2 align-text-bottom" />
+                )}
+              </p>
+            )}
             {profileMsg && <p className="text-sm text-[var(--text-secondary)]">{profileMsg}</p>}
             <Button type="submit" disabled={profileSaving} size="sm">
               {profileSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </form>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-4">Change Password</h3>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <Input label="Current Password" type="password" value={currentPw} onChange={e => setCurrentPw(e.target.value)} required />
-            <Input label="New Password" type="password" value={newPw} onChange={e => setNewPw(e.target.value)} placeholder="At least 8 characters" required minLength={8} />
-            {pwMsg && <p className="text-sm text-[var(--text-secondary)]">{pwMsg}</p>}
-            <Button type="submit" disabled={pwSaving} size="sm">
-              {pwSaving ? 'Changing...' : 'Change Password'}
             </Button>
           </form>
         </Card>

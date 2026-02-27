@@ -1,27 +1,7 @@
-import { cloudFetch, setToken } from './client'
-import type { AuthResponse, User, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
+import { cloudFetch } from './client'
+import type { User, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
 
 export const cloudAPI = {
-  async login(email: string, password: string): Promise<AuthResponse> {
-    const res = await cloudFetch<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-      credentials: 'include',
-    })
-    setToken(res.token)
-    return res
-  },
-
-  async register(name: string, email: string, password: string): Promise<AuthResponse> {
-    const res = await cloudFetch<AuthResponse>('/auth/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-      credentials: 'include',
-    })
-    setToken(res.token)
-    return res
-  },
-
   async getProfile(): Promise<User> {
     return cloudFetch<User>('/profile')
   },
@@ -30,13 +10,6 @@ export const cloudAPI = {
     return cloudFetch<User>('/profile', {
       method: 'PATCH',
       body: JSON.stringify(data),
-    })
-  },
-
-  async changePassword(current: string, newPass: string): Promise<void> {
-    await cloudFetch('/profile/password', {
-      method: 'POST',
-      body: JSON.stringify({ current_password: current, new_password: newPass }),
     })
   },
 

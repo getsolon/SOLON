@@ -8,6 +8,7 @@ routes = [
 
 [vars]
 ENVIRONMENT = "production"
+DASHBOARD_URL = "https://app.getsolon.dev"
 
 [[d1_databases]]
 binding = "DB"
