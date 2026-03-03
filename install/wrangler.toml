@@ -1,0 +1,7 @@
+name = "solon-install"
+main = "src/index.ts"
+compatibility_date = "2024-05-29"
+
+routes = [
+  { pattern = "getsolon.dev/*", zone_id = "ef7817a1391e315927214ae83309f562" }
+]
