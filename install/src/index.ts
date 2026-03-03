@@ -85,6 +85,10 @@ fi
 echo "Installing to \${INSTALL_DIR}/solon..."
 chmod +x "\${TMPDIR}/solon"
 
+if [ ! -d "$INSTALL_DIR" ]; then
+  sudo mkdir -p "$INSTALL_DIR"
+fi
+
 if [ -w "$INSTALL_DIR" ]; then
   mv "\${TMPDIR}/solon" "\${INSTALL_DIR}/solon"
 else
