@@ -1,5 +1,5 @@
 import { cloudFetch } from './client'
-import type { User, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
+import type { User, AdminUser, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
 
 export const cloudAPI = {
   async getProfile(): Promise<User> {
@@ -69,5 +69,21 @@ export const cloudAPI = {
 
   async healthCheckInstance(id: string): Promise<{ status: string; version: string | null; models_count: number }> {
     return cloudFetch(`/instances/${id}/health`, { method: 'POST' })
+  },
+
+  // Admin
+  async getUsers(): Promise<AdminUser[]> {
+    return cloudFetch<AdminUser[]>('/admin/users')
+  },
+
+  async updateUserRole(id: string, role: 'user' | 'waitlisted'): Promise<AdminUser> {
+    return cloudFetch<AdminUser>(`/admin/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    })
+  },
+
+  async deleteUser(id: string): Promise<void> {
+    await cloudFetch(`/admin/users/${id}`, { method: 'DELETE' })
   },
 }

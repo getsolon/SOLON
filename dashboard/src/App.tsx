@@ -24,6 +24,7 @@ import InstanceDetail from './pages/cloud/InstanceDetail'
 import Billing from './pages/cloud/Billing'
 import Team from './pages/cloud/Team'
 import AccountSettings from './pages/cloud/AccountSettings'
+import Users from './pages/cloud/Users'
 
 function RequireLocal({ children }: { children: React.ReactNode }) {
   const mode = useModeStore(s => s.mode)
@@ -35,6 +36,13 @@ function RequireCloudAuth({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
   if (!user) return <Navigate to="/login" replace />
   if (user.role === 'waitlisted') return <Navigate to="/waitlisted" replace />
+  return <>{children}</>
+}
+
+function RequireAdmin({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'admin') return <Navigate to="/" replace />
   return <>{children}</>
 }
 
@@ -127,6 +135,9 @@ export default function App() {
         <Route path="/billing" element={<RequireCloudAuth><Billing /></RequireCloudAuth>} />
         <Route path="/team" element={<RequireCloudAuth><Team /></RequireCloudAuth>} />
         <Route path="/settings" element={<RequireCloudAuth><AccountSettings /></RequireCloudAuth>} />
+
+        {/* Admin routes */}
+        <Route path="/admin/users" element={<RequireAdmin><Users /></RequireAdmin>} />
       </Route>
 
       {/* Catch-all */}

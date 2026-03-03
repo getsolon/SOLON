@@ -11,6 +11,16 @@ export interface User {
   created_at: string
 }
 
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  avatar_url: string | null
+  role: 'admin' | 'user' | 'waitlisted'
+  provider: 'github' | 'google' | null
+  created_at: string
+}
+
 export interface AuthResponse {
   token: string
   user: User

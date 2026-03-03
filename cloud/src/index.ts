@@ -11,6 +11,7 @@ import instanceRoutes from './routes/instances'
 import tokenRoutes from './routes/tokens'
 import teamRoutes from './routes/team'
 import billingRoutes from './routes/billing'
+import adminRoutes from './routes/admin'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -49,6 +50,13 @@ protected_.route('/team', teamRoutes)
 protected_.route('/billing', billingRoutes)
 
 authed.route('/', protected_)
+
+// Admin routes require admin role
+const adminGroup = new Hono<{ Bindings: Env; Variables: { userId: string; userPlan: string; userRole: string } }>()
+adminGroup.use('*', requireRole('admin'))
+adminGroup.route('/', adminRoutes)
+
+authed.route('/admin', adminGroup)
 
 app.route('/api', authed)
 
