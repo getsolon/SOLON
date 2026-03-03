@@ -84,7 +84,7 @@ Management endpoints require admin scope for remote access:
 ## Build from source
 
 ```bash
-git clone https://github.com/openclaw/solon.git
+git clone https://github.com/theodorthirtyseven37/SOLON.git
 cd solon
 make setup        # Initialize submodules and build llama.cpp
 make build        # Build the binary (includes dashboard)

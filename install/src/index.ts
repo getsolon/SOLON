@@ -3,7 +3,7 @@ const INSTALL_SCRIPT = `#!/bin/sh
 # Usage: curl -fsSL https://getsolon.dev | sh
 set -e
 
-REPO="openclaw/solon"
+REPO="theodorthirtyseven37/SOLON"
 INSTALL_DIR="\${SOLON_INSTALL_DIR:-/usr/local/bin}"
 
 # Detect OS
