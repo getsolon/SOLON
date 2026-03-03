@@ -15,7 +15,8 @@ ifeq ($(UNAME_S),Darwin)
 CGO_ENV += CGO_LDFLAGS="-lggml-metal -lggml-blas -framework Accelerate -framework Metal -framework Foundation -framework MetalKit"
 endif
 
-.PHONY: build build-dashboard build-llamacpp build-all test lint dev clean setup
+.PHONY: build build-dashboard build-llamacpp build-all test lint dev clean setup \
+	build-sidecar build-desktop dev-desktop clean-desktop
 
 # Build the binary (includes dashboard + llama.cpp)
 build: build-dashboard build-llamacpp
@@ -66,6 +67,34 @@ dev: build
 setup:
 	git submodule update --init --recursive
 	$(MAKE) build-llamacpp
+
+# Desktop app (Tauri)
+
+# Detect target triple for sidecar naming
+UNAME_M := $(shell uname -m)
+ifeq ($(UNAME_M),arm64)
+TAURI_TARGET_TRIPLE := aarch64-apple-darwin
+else
+TAURI_TARGET_TRIPLE := x86_64-apple-darwin
+endif
+
+# Copy Go binary as Tauri sidecar
+build-sidecar: build
+	@mkdir -p desktop/src-tauri/bin
+	cp bin/$(BINARY_NAME) desktop/src-tauri/bin/$(BINARY_NAME)-$(TAURI_TARGET_TRIPLE)
+
+# Build desktop app (.dmg + .app)
+build-desktop: build-sidecar
+	cd desktop/src-tauri && cargo tauri build
+
+# Run desktop app in dev mode
+dev-desktop: build-sidecar
+	cd desktop/src-tauri && cargo tauri dev
+
+# Clean desktop build artifacts
+clean-desktop:
+	rm -f desktop/src-tauri/bin/solon-*
+	rm -rf desktop/src-tauri/target
 
 # Clean build artifacts
 clean:

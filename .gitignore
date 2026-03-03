@@ -14,5 +14,10 @@ website/node_modules/
 website/package-lock.json
 website/.astro/
 
+# Desktop app (Tauri)
+desktop/src-tauri/bin/solon-*
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+
 # OS files
 .DS_Store
