@@ -40,7 +40,7 @@ Solon fills this gap.
 brew install solon
 
 # Linux / macOS (universal)
-curl -fsSL https://get.solon.dev | sh
+curl -fsSL https://getsolon.dev | sh
 ```
 
 Single binary, no Docker, no Python, no dependencies.

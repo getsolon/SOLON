@@ -1,6 +1,6 @@
 #!/bin/sh
 # Solon installer — https://solon.dev
-# Usage: curl -fsSL https://get.solon.dev | sh
+# Usage: curl -fsSL https://getsolon.dev | sh
 set -e
 
 REPO="openclaw/solon"

@@ -7,7 +7,7 @@ Solon is a self-hosted AI runtime with mandatory auth, secure tunnel access, and
 ## Install
 
 ```bash
-curl -fsSL https://get.solon.dev | sh
+curl -fsSL https://getsolon.dev | sh
 ```
 
 Or with Homebrew:
