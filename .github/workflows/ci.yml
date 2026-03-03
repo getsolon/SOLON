@@ -135,7 +135,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy website/dist --project-name=solon-dev
+          command: pages deploy dist --project-name=solon-dev
+          workingDirectory: website
 
   cloud-app:
     needs: test
