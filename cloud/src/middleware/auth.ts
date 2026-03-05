@@ -46,6 +46,6 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Varia
 
   c.set('userId', payload.sub)
   c.set('userPlan', payload.plan)
-  c.set('userRole', payload.role || 'waitlisted')
+  c.set('userRole', payload.role || 'user')
   return next()
 })

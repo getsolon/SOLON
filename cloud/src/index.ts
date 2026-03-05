@@ -17,7 +17,7 @@ const app = new Hono<{ Bindings: Env }>()
 
 // CORS
 app.use('/api/*', cors({
-  origin: ['http://localhost:5173', 'https://app.getsolon.dev'],
+  origin: ['http://localhost:5173', 'https://app.getsolon.dev', 'http://localhost:8420'],
   credentials: true,
 }))
 

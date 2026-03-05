@@ -17,12 +17,7 @@ export default function AuthCallback() {
 
     setToken(token)
     loadUser().then(() => {
-      const { user } = useAuthStore.getState()
-      if (user?.role === 'waitlisted') {
-        navigate('/waitlisted', { replace: true })
-      } else {
-        navigate('/', { replace: true })
-      }
+      navigate('/', { replace: true })
     })
   }, [params, navigate, loadUser])
 

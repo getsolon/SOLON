@@ -1,4 +1,12 @@
+import { isDesktopApp } from '../lib/mode'
+
 const CLOUD_TOKEN_KEY = 'solon-cloud-token'
+const CLOUD_API_BASE = 'https://api.getsolon.dev'
+
+function cloudApiUrl(path: string): string {
+  if (isDesktopApp()) return `${CLOUD_API_BASE}/api${path}`
+  return `/api${path}`
+}
 
 export function getToken(): string | null {
   return localStorage.getItem(CLOUD_TOKEN_KEY)
@@ -31,7 +39,7 @@ let refreshing: Promise<string | null> | null = null
 
 async function tryRefresh(): Promise<string | null> {
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(cloudApiUrl('/auth/refresh'), {
       method: 'POST',
       credentials: 'include',
     })
@@ -49,7 +57,8 @@ async function tryRefresh(): Promise<string | null> {
 
 export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T> {
   const token = getToken()
-  const res = await fetch(`/api${path}`, {
+  const url = cloudApiUrl(path)
+  const res = await fetch(url, {
     ...opts,
     credentials: opts?.credentials || 'same-origin',
     headers: {
@@ -67,7 +76,7 @@ export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T
 
     if (newToken) {
       // Retry original request with new token
-      const retry = await fetch(`/api${path}`, {
+      const retry = await fetch(url, {
         ...opts,
         credentials: opts?.credentials || 'same-origin',
         headers: {

@@ -9,6 +9,13 @@
   "app": {
     "windows": []
   },
+  "plugins": {
+    "deep-link": {
+      "desktop": {
+        "schemes": ["solon"]
+      }
+    }
+  },
   "bundle": {
     "active": true,
     "targets": ["dmg", "app"],

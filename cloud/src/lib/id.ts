@@ -34,3 +34,7 @@ export function memberId(): string {
 export function refreshTokenId(): string {
   return `rt_${nanoid()}`
 }
+
+export function deviceTokenId(): string {
+  return `dt_${nanoid()}`
+}

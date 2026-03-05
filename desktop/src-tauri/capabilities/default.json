@@ -6,6 +6,8 @@
   "permissions": [
     "shell:allow-execute",
     "shell:allow-stdin-write",
-    "shell:allow-kill"
+    "shell:allow-kill",
+    "deep-link:default",
+    "store:default"
   ]
 }

@@ -16,8 +16,34 @@ struct Sidecar(Mutex<Option<CommandChild>>);
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_store::Builder::default().build())
         .setup(|app| {
             let handle = app.handle().clone();
+
+            // Register deep link handler for solon:// URLs
+            let deep_link_handle = handle.clone();
+            app.listen("deep-link://new-url", move |event| {
+                let payload = event.payload();
+                // payload is a JSON array of URL strings
+                if let Ok(urls) = serde_json::from_str::<Vec<String>>(payload) {
+                    for url in urls {
+                        if let Some(token) = url
+                            .strip_prefix("solon://auth/callback?device_token=")
+                            .or_else(|| url.strip_prefix("solon://auth/callback/?device_token="))
+                        {
+                            let token = token.to_string();
+                            if let Some(window) = deep_link_handle.get_webview_window("main") {
+                                let js = format!(
+                                    "window.__SOLON_DEVICE_TOKEN__ = '{}'; window.dispatchEvent(new CustomEvent('solon-device-token', {{ detail: '{}' }}))",
+                                    token, token
+                                );
+                                let _ = window.eval(&js);
+                            }
+                        }
+                    }
+                }
+            });
 
             // Spawn the sidecar
             let sidecar = handle

@@ -1,5 +1,9 @@
 export type AppMode = 'local' | 'cloud' | 'hybrid'
 
+export function isDesktopApp(): boolean {
+  return '__TAURI_INTERNALS__' in window
+}
+
 export async function detectLocalAvailability(): Promise<boolean> {
   try {
     const res = await fetch('/api/v1/health', { signal: AbortSignal.timeout(3000) })
