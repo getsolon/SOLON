@@ -1,11 +1,8 @@
-import { isDesktopApp } from '../lib/mode'
-
 const CLOUD_TOKEN_KEY = 'solon-cloud-token'
 const CLOUD_API_BASE = 'https://api.getsolon.dev'
 
 function cloudApiUrl(path: string): string {
-  if (isDesktopApp()) return `${CLOUD_API_BASE}/api${path}`
-  return `/api${path}`
+  return `${CLOUD_API_BASE}/api${path}`
 }
 
 export function getToken(): string | null {
@@ -60,7 +57,7 @@ export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T
   const url = cloudApiUrl(path)
   const res = await fetch(url, {
     ...opts,
-    credentials: opts?.credentials || 'same-origin',
+    credentials: opts?.credentials || 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -78,7 +75,7 @@ export async function cloudFetch<T>(path: string, opts?: RequestInit): Promise<T
       // Retry original request with new token
       const retry = await fetch(url, {
         ...opts,
-        credentials: opts?.credentials || 'same-origin',
+        credentials: opts?.credentials || 'include',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${newToken}`,
