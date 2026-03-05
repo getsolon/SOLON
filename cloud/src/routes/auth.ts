@@ -3,7 +3,7 @@ import type { Env, UserRow } from '../types'
 import { sha256 } from '../lib/password'
 import { signJWT } from '../lib/jwt'
 import { userId, refreshTokenId, deviceTokenId } from '../lib/id'
-import { badRequest, unauthorized } from '../lib/errors'
+import { badRequest, unauthorized, forbidden } from '../lib/errors'
 import {
   generateState,
   githubAuthURL,
@@ -140,6 +140,16 @@ async function handleOAuthCallback(
         .run()
       user = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>())!
     } else {
+      // Beta allowlist — only permit specific GitHub users to sign up
+      // TODO: remove when ready for open signups
+      const ALLOWED_GITHUB_IDS = ['262115430', '47386942']
+      if (provider === 'github' && !ALLOWED_GITHUB_IDS.includes(profile.id)) {
+        throw forbidden('Signups are currently limited to beta testers')
+      }
+      if (provider === 'google') {
+        throw forbidden('Signups are currently limited to beta testers')
+      }
+
       // Create new user
       const id = userId()
       const role = determineRole(provider, profile, env)
