@@ -4,10 +4,9 @@ import { isDesktopApp } from '../../lib/mode'
 const CLOUD_API = 'https://api.getsolon.dev'
 
 function oauthHref(provider: 'github' | 'google'): string {
-  if (isDesktopApp()) {
-    return `${CLOUD_API}/api/auth/${provider}?desktop=true`
-  }
-  return `/api/auth/${provider}`
+  const desktop = isDesktopApp()
+  const base = `${CLOUD_API}/api/auth/${provider}`
+  return desktop ? `${base}?desktop=true` : base
 }
 
 export default function Login() {
