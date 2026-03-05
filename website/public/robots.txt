@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://solon.dev/sitemap.xml
+Sitemap: https://www.getsolon.dev/sitemap.xml

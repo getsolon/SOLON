@@ -23,7 +23,7 @@ func NewRelay(port int, apiKey string) *Relay {
 }
 
 func (r *Relay) Enable(ctx context.Context) error {
-	// TODO: Implement WebSocket connection to relay.solon.dev (v0.2)
+	// TODO: Implement WebSocket connection to relay.getsolon.dev (v0.2)
 	return fmt.Errorf("solon relay not yet implemented (planned for v0.2)")
 }
 

@@ -152,7 +152,7 @@ type Tunnel interface {
 
 **Implementations:**
 - `cloudflare.go`: Cloudflare Tunnel (free). Spawns `cloudflared` as a subprocess.
-- `relay.go`: Solon Relay (paid). WebSocket connection to relay.solon.dev.
+- `relay.go`: Solon Relay (paid). WebSocket connection to relay.getsolon.dev.
 
 #### 4. Storage (`internal/storage/`)
 

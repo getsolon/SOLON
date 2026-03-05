@@ -107,7 +107,11 @@ echo "Dashboard: http://localhost:8420"
 `;
 
 export default {
-  async fetch(): Promise<Response> {
+  async fetch(request: Request): Promise<Response> {
+    const accept = request.headers.get('accept') || '';
+    if (accept.includes('text/html')) {
+      return Response.redirect('https://www.getsolon.dev', 302);
+    }
     return new Response(INSTALL_SCRIPT, {
       headers: { 'content-type': 'text/plain; charset=utf-8' },
     });

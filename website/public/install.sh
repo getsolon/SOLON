@@ -1,5 +1,5 @@
 #!/bin/sh
-# Solon installer — https://solon.dev
+# Solon installer — https://www.getsolon.dev
 # Usage: curl -fsSL https://getsolon.dev | sh
 set -e
 
@@ -104,4 +104,4 @@ echo "  solon models pull llama3.2:3b  # Download a model"
 echo "  solon keys create --name my-app  # Create an API key"
 echo ""
 echo "Dashboard: http://localhost:8420"
-echo "Docs:      https://solon.dev/docs"
+echo "Docs:      https://www.getsolon.dev/docs"
