@@ -7,7 +7,9 @@ export function isDesktopApp(): boolean {
 export async function detectLocalAvailability(): Promise<boolean> {
   try {
     const res = await fetch('/api/v1/health', { signal: AbortSignal.timeout(3000) })
-    return res.ok
+    if (!res.ok) return false
+    const ct = res.headers.get('content-type') || ''
+    return ct.includes('application/json')
   } catch {
     return false
   }
