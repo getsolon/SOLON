@@ -3,6 +3,7 @@ package gateway
 import (
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/openclaw/solon/internal/inference"
 )
@@ -24,16 +25,26 @@ var validRoles = map[string]bool{
 }
 
 // modelNamePattern allows alphanumeric, colons, dots, hyphens, underscores, and slashes.
-// This prevents path traversal or shell injection via model names.
 var modelNamePattern = regexp.MustCompile(`^[a-zA-Z0-9_.:\-/]+$`)
+
+// validateModelName checks a model name for valid characters and rejects path traversal.
+func validateModelName(name string) error {
+	if name == "" {
+		return fmt.Errorf("model is required")
+	}
+	if !modelNamePattern.MatchString(name) {
+		return fmt.Errorf("invalid model name")
+	}
+	if strings.Contains(name, "..") {
+		return fmt.Errorf("invalid model name")
+	}
+	return nil
+}
 
 // validateChatRequest validates a chat completion request.
 func validateChatRequest(req *inference.ChatCompletionRequest) error {
-	if req.Model == "" {
-		return fmt.Errorf("model is required")
-	}
-	if !modelNamePattern.MatchString(req.Model) {
-		return fmt.Errorf("invalid model name")
+	if err := validateModelName(req.Model); err != nil {
+		return err
 	}
 
 	if len(req.Messages) == 0 {
@@ -74,11 +85,8 @@ func validateChatRequest(req *inference.ChatCompletionRequest) error {
 
 // validateTextRequest validates a text completion request.
 func validateTextRequest(req *inference.TextCompletionRequest) error {
-	if req.Model == "" {
-		return fmt.Errorf("model is required")
-	}
-	if !modelNamePattern.MatchString(req.Model) {
-		return fmt.Errorf("invalid model name")
+	if err := validateModelName(req.Model); err != nil {
+		return err
 	}
 
 	if len(req.Prompt) > DefaultMaxContentLength {

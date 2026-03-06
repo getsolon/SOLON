@@ -99,6 +99,8 @@ func TestRateLimitMiddleware(t *testing.T) {
 	globalRateLimiter = newRateLimiter()
 
 	// The key has rate_limit=60, burst=10. Send 15 requests.
+	// Note: bcrypt auth takes ~100ms/request, so token refill (1/sec) may
+	// add 1-2 extra tokens during the loop. Use range assertions.
 	var okCount, rateLimited int
 	for i := 0; i < 15; i++ {
 		req := httptest.NewRequest("POST", "/v1/chat/completions", nil)
@@ -114,8 +116,9 @@ func TestRateLimitMiddleware(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 10, okCount, "burst allows 10 requests")
-	assert.Equal(t, 5, rateLimited, "excess requests should be rate limited")
+	assert.GreaterOrEqual(t, okCount, 10, "burst allows at least 10 requests")
+	assert.LessOrEqual(t, okCount, 12, "should not allow more than burst + refill")
+	assert.Equal(t, 15, okCount+rateLimited, "all requests should be OK or rate limited")
 }
 
 func TestRateLimitRetryAfterHeader(t *testing.T) {
