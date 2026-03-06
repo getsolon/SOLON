@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/openclaw/solon/internal/gateway"
+	"github.com/openclaw/solon/internal/guardrails"
 	"github.com/openclaw/solon/internal/inference"
 	"github.com/openclaw/solon/internal/models"
 	"github.com/openclaw/solon/internal/storage"
@@ -80,12 +81,18 @@ func serveCmd() *cobra.Command {
 
 			t := tunnel.NewCloudflare(port)
 
+			// Load guardrails config and policies
+			grCfg := guardrails.LoadConfig(guardrails.ConfigPath())
+			policies := guardrails.NewPolicyStore(guardrails.PoliciesDir())
+
 			gw, err := gateway.New(gateway.Config{
-				Port:    port,
-				Version: version,
-				Engine:  engine,
-				Store:   db,
-				Tunnel:  t,
+				Port:       port,
+				Version:    version,
+				Engine:     engine,
+				Store:      db,
+				Tunnel:     t,
+				Guardrails: grCfg,
+				Policies:   policies,
 			})
 			if err != nil {
 				return fmt.Errorf("creating gateway: %w", err)
@@ -522,4 +529,3 @@ func versionCmd() *cobra.Command {
 		},
 	}
 }
-

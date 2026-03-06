@@ -91,6 +91,19 @@ func (d *DB) migrate() error {
 			pulled_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
 			last_used    DATETIME
 		)`,
+		`CREATE TABLE IF NOT EXISTS guardrail_events (
+			id          INTEGER PRIMARY KEY AUTOINCREMENT,
+			request_id  TEXT NOT NULL,
+			key_id      TEXT,
+			model       TEXT,
+			stage       TEXT NOT NULL,
+			action      TEXT NOT NULL,
+			reason      TEXT,
+			score       REAL,
+			created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_guardrail_events_request ON guardrail_events(request_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_guardrail_events_action ON guardrail_events(action)`,
 	}
 
 	for _, m := range migrations {

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/openclaw/solon/internal/dashboard"
+	"github.com/openclaw/solon/internal/guardrails"
 	"github.com/openclaw/solon/internal/inference"
 	"github.com/openclaw/solon/internal/models"
 	"github.com/openclaw/solon/internal/storage"
@@ -19,32 +20,50 @@ import (
 
 // Config holds gateway configuration.
 type Config struct {
-	Port    int
-	Version string
-	Engine  *inference.Engine
-	Store   *storage.DB
-	Tunnel  tunnel.Tunnel
+	Port       int
+	Version    string
+	Engine     *inference.Engine
+	Store      *storage.DB
+	Tunnel     tunnel.Tunnel
+	Guardrails *guardrails.Config
+	Policies   *guardrails.PolicyStore
 }
 
 // Gateway is the main HTTP server that handles auth, routing, and middleware.
 type Gateway struct {
-	router  chi.Router
-	engine  *inference.Engine
-	store   *storage.DB
-	tunnel  tunnel.Tunnel
-	port    int
-	version string
+	router     chi.Router
+	engine     *inference.Engine
+	store      *storage.DB
+	tunnel     tunnel.Tunnel
+	port       int
+	version    string
+	guardrails *guardrails.Config
+	policies   *guardrails.PolicyStore
+	shield     *guardrails.Shield
 }
 
 // New creates a new Gateway with the given configuration.
 func New(cfg Config) (*Gateway, error) {
+	grCfg := cfg.Guardrails
+	if grCfg == nil {
+		grCfg = guardrails.DefaultConfig()
+	}
+
+	var shield *guardrails.Shield
+	if grCfg.Enabled && grCfg.Shield.Enabled {
+		shield = guardrails.NewShield(grCfg.Shield.Threshold)
+	}
+
 	g := &Gateway{
-		router:  chi.NewRouter(),
-		engine:  cfg.Engine,
-		store:   cfg.Store,
-		tunnel:  cfg.Tunnel,
-		port:    cfg.Port,
-		version: cfg.Version,
+		router:     chi.NewRouter(),
+		engine:     cfg.Engine,
+		store:      cfg.Store,
+		tunnel:     cfg.Tunnel,
+		port:       cfg.Port,
+		version:    cfg.Version,
+		guardrails: grCfg,
+		policies:   cfg.Policies,
+		shield:     shield,
 	}
 
 	g.setupRoutes()
@@ -92,6 +111,7 @@ func (g *Gateway) setupRoutes() {
 		// Analytics
 		r.Get("/api/v1/analytics/requests", g.handleRequestLog)
 		r.Get("/api/v1/analytics/usage", g.handleUsageStats)
+		r.Get("/api/v1/analytics/guardrails", g.handleGuardrailEvents)
 
 		// Tunnel
 		r.Get("/api/v1/tunnel/status", g.handleTunnelStatus)
@@ -112,10 +132,12 @@ func (g *Gateway) ListenAndServe() error {
 // --- Inference handlers ---
 
 func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
-	// Read body so we can log it on error
+	// Limit body size to prevent OOM
+	r.Body = http.MaxBytesReader(w, r.Body, int64(g.guardrails.Gate.MaxBodyBytes))
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		writeError(w, http.StatusBadRequest, "request body too large or unreadable")
 		return
 	}
 
@@ -124,6 +146,36 @@ func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 		log.Printf("decode error: %v | body: %s", err, string(body[:min(len(body), 500)]))
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
 		return
+	}
+
+	// Step 1: Structural validation
+	if err := validateChatRequest(&req); err != nil {
+		g.logGuardrailEvent(r, req.Model, "gate", "block", err.Error(), 0)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Step 2: Shield — prompt injection detection
+	if g.shield != nil {
+		msgs := chatMessagesToGuardrailMessages(req.Messages)
+		result := g.shield.Scan(msgs)
+		if result.Blocked && g.guardrails.Shield.Action == "block" {
+			g.logGuardrailEvent(r, req.Model, "shield", "block", fmt.Sprintf("patterns: %v", result.Patterns), result.Score)
+			writeError(w, http.StatusBadRequest, "request blocked by content policy")
+			return
+		}
+		if len(result.Patterns) > 0 {
+			g.logGuardrailEvent(r, req.Model, "shield", "flag", fmt.Sprintf("patterns: %v", result.Patterns), result.Score)
+		}
+	}
+
+	// Step 3: Policy — system prompt pinning + content tagging
+	if g.policies != nil {
+		if policy := g.policies.ForModel(req.Model); policy != nil {
+			msgs := chatMessagesToGuardrailMessages(req.Messages)
+			transformed := policy.Apply(msgs)
+			req.Messages = guardrailMessagesToChatMessages(transformed)
+		}
 	}
 
 	start := time.Now()
@@ -215,15 +267,24 @@ func (g *Gateway) handleChatCompletionsStream(w http.ResponseWriter, r *http.Req
 }
 
 func (g *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, int64(g.guardrails.Gate.MaxBodyBytes))
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		writeError(w, http.StatusBadRequest, "request body too large or unreadable")
 		return
 	}
 
 	var req inference.TextCompletionRequest
 	if err := json.Unmarshal(body, &req); err != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid request body: %v", err))
+		return
+	}
+
+	// Structural validation
+	if err := validateTextRequest(&req); err != nil {
+		g.logGuardrailEvent(r, req.Model, "gate", "block", err.Error(), 0)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -245,9 +306,11 @@ func (g *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g *Gateway) handleEmbeddings(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, int64(g.guardrails.Gate.MaxBodyBytes))
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		writeError(w, http.StatusBadRequest, "request body too large or unreadable")
 		return
 	}
 
@@ -533,6 +596,19 @@ func (g *Gateway) handleTunnelDisable(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "disabled"})
 }
 
+func (g *Gateway) handleGuardrailEvents(w http.ResponseWriter, r *http.Request) {
+	events, err := g.store.GetGuardrailEvents(100)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	stats, _ := g.store.GetGuardrailStats()
+	writeJSON(w, http.StatusOK, map[string]any{
+		"events": events,
+		"stats":  stats,
+	})
+}
+
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -546,4 +622,39 @@ func writeError(w http.ResponseWriter, status int, message string) {
 			"type":    http.StatusText(status),
 		},
 	})
+}
+
+// --- Guardrails helpers ---
+
+func chatMessagesToGuardrailMessages(msgs []inference.ChatMessage) []guardrails.Message {
+	result := make([]guardrails.Message, len(msgs))
+	for i, m := range msgs {
+		result[i] = guardrails.Message{Role: m.Role, Content: m.Content.Text}
+	}
+	return result
+}
+
+func guardrailMessagesToChatMessages(msgs []guardrails.Message) []inference.ChatMessage {
+	result := make([]inference.ChatMessage, len(msgs))
+	for i, m := range msgs {
+		result[i] = inference.ChatMessage{
+			Role:    m.Role,
+			Content: inference.ChatContent{Text: m.Content},
+		}
+	}
+	return result
+}
+
+func (g *Gateway) logGuardrailEvent(r *http.Request, model, stage, action, reason string, score float64) {
+	if g.store == nil || g.guardrails == nil || !g.guardrails.Audit.Enabled {
+		return
+	}
+
+	requestID := r.Header.Get("X-Request-ID")
+	keyID := ""
+	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		keyID = keyInfo.ID
+	}
+
+	_ = g.store.LogGuardrailEvent(requestID, keyID, model, stage, action, reason, score)
 }
