@@ -10,7 +10,12 @@ const links = [
 
 <nav class="sticky top-0 z-50 bg-white/80 dark:bg-[#0b0b11]/80 backdrop-blur-lg border-b border-gray-100 dark:border-white/[0.06]">
   <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-    <a href="/" class="text-xl font-extrabold tracking-tight text-brand dark:text-white">Solon</a>
+    <a href="/" class="flex items-center gap-2">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style="filter: drop-shadow(0 0 6px rgba(108, 99, 255, 0.4))">
+        <circle cx="14" cy="14" r="11" class="fill-[#1a1a2e] dark:fill-white" />
+      </svg>
+      <span class="text-xl font-extrabold tracking-tight text-brand dark:text-white">Solon</span>
+    </a>
     <div class="flex items-center gap-8">
       {links.map(link => (
         <a

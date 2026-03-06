@@ -1,4 +1,5 @@
 import { useAuth } from '../../hooks/useAuth'
+import Logo from '../../components/Logo'
 
 const DMG_URL = 'https://github.com/theodorthirtyseven37/SOLON/releases/latest/download/Solon.dmg'
 
@@ -18,9 +19,7 @@ export default function Onboarding() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4">
       <div className="max-w-lg w-full text-center">
-        <div className="mx-auto mb-6 h-14 w-14 rounded-2xl bg-brand flex items-center justify-center">
-          <span className="text-white font-bold text-2xl">S</span>
-        </div>
+        <Logo size={56} className="mx-auto mb-6" />
 
         <h1 className="text-2xl font-bold text-[var(--text)] mb-2">
           Welcome{user?.name ? `, ${user.name}` : ''}!

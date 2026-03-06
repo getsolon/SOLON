@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { setToken } from '../../api/client'
 import { useAuthStore } from '../../store/auth'
+import Logo from '../../components/Logo'
 
 export default function AuthCallback() {
   const [params] = useSearchParams()
@@ -24,9 +25,7 @@ export default function AuthCallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
       <div className="text-center">
-        <div className="mx-auto mb-3 h-10 w-10 rounded-xl bg-brand flex items-center justify-center">
-          <span className="text-white font-bold text-lg">S</span>
-        </div>
+        <Logo size={40} className="mx-auto mb-3" />
         <p className="text-sm text-[var(--text-tertiary)]">Signing you in...</p>
       </div>
     </div>

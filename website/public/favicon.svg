@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    circle { fill: #1a1a2e; }
+    @media (prefers-color-scheme: dark) {
+      circle { fill: #ffffff; }
+    }
+  </style>
+  <circle cx="16" cy="16" r="12.5"/>
+</svg>

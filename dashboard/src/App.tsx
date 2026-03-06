@@ -26,6 +26,7 @@ import Team from './pages/cloud/Team'
 import AccountSettings from './pages/cloud/AccountSettings'
 import Users from './pages/cloud/Users'
 import Onboarding from './pages/cloud/Onboarding'
+import Logo from './components/Logo'
 
 function RequireLocal({ children }: { children: React.ReactNode }) {
   const mode = useModeStore(s => s.mode)
@@ -106,9 +107,7 @@ export default function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--bg)]">
         <div className="text-center">
-          <div className="mx-auto mb-3 h-10 w-10 rounded-xl bg-brand flex items-center justify-center">
-            <span className="text-white font-bold text-lg">S</span>
-          </div>
+          <Logo size={40} className="mx-auto mb-3" />
           <p className="text-sm text-[var(--text-tertiary)]">Loading...</p>
         </div>
       </div>

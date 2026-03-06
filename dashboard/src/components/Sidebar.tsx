@@ -5,6 +5,7 @@ import { useModeStore } from '../store/mode'
 import { useInstancesStore } from '../store/instances'
 import { useServerStore } from '../store/server'
 import ThemeToggle from './ThemeToggle'
+import Logo from './Logo'
 
 const localNavItems = [
   {
@@ -126,7 +127,7 @@ export default function Sidebar() {
       <aside className={`fixed top-0 left-0 z-50 h-full w-60 bg-brand text-white flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="h-8 w-8 rounded-lg bg-brand-light flex items-center justify-center font-bold text-sm">S</div>
+          <Logo size={32} />
           <div>
             <div className="font-semibold text-sm">
               {mode === 'cloud' ? 'Solon Cloud' : 'Solon'}
