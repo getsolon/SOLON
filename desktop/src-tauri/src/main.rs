@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::sync::Mutex;
-use tauri::{Manager, WebviewWindowBuilder};
+use tauri::{Listener, Manager, WebviewWindowBuilder};
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 use tokio::time::{sleep, Duration};
@@ -23,7 +23,7 @@ fn main() {
 
             // Register deep link handler for solon:// URLs
             let deep_link_handle = handle.clone();
-            app.listen("deep-link://new-url", move |event| {
+            app.listen("deep-link://new-url", move |event: tauri::Event| {
                 let payload = event.payload();
                 // payload is a JSON array of URL strings
                 if let Ok(urls) = serde_json::from_str::<Vec<String>>(payload) {
