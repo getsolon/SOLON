@@ -16,6 +16,7 @@ type RequestLog struct {
 	TokensOut  int       `json:"tokens_out"`
 	LatencyMS  int       `json:"latency_ms"`
 	StatusCode int       `json:"status_code"`
+	Provider   string    `json:"provider,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
@@ -31,10 +32,10 @@ type UsageStats struct {
 }
 
 // LogRequest records an API request in the analytics database.
-func (d *DB) LogRequest(keyID, method, path, model string, tokensIn, tokensOut, latencyMS, statusCode int) error {
+func (d *DB) LogRequest(keyID, method, path, model string, tokensIn, tokensOut, latencyMS, statusCode int, provider string) error {
 	_, err := d.db.Exec(
-		`INSERT INTO requests (key_id, method, path, model, tokens_in, tokens_out, latency_ms, status_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		keyID, method, path, model, tokensIn, tokensOut, latencyMS, statusCode,
+		`INSERT INTO requests (key_id, method, path, model, tokens_in, tokens_out, latency_ms, status_code, provider) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		keyID, method, path, model, tokensIn, tokensOut, latencyMS, statusCode, provider,
 	)
 	if err != nil {
 		return fmt.Errorf("logging request: %w", err)
@@ -45,7 +46,7 @@ func (d *DB) LogRequest(keyID, method, path, model string, tokensIn, tokensOut, 
 // GetRequestLog returns the most recent API requests.
 func (d *DB) GetRequestLog(limit int) ([]RequestLog, error) {
 	rows, err := d.db.Query(
-		`SELECT id, key_id, method, path, model, tokens_in, tokens_out, latency_ms, status_code, created_at
+		`SELECT id, key_id, method, path, model, tokens_in, tokens_out, latency_ms, status_code, created_at, provider
 		 FROM requests ORDER BY created_at DESC LIMIT ?`,
 		limit,
 	)
@@ -57,12 +58,15 @@ func (d *DB) GetRequestLog(limit int) ([]RequestLog, error) {
 	var logs []RequestLog
 	for rows.Next() {
 		var log RequestLog
-		var model *string
-		if err := rows.Scan(&log.ID, &log.KeyID, &log.Method, &log.Path, &model, &log.TokensIn, &log.TokensOut, &log.LatencyMS, &log.StatusCode, &log.CreatedAt); err != nil {
+		var model, provider *string
+		if err := rows.Scan(&log.ID, &log.KeyID, &log.Method, &log.Path, &model, &log.TokensIn, &log.TokensOut, &log.LatencyMS, &log.StatusCode, &log.CreatedAt, &provider); err != nil {
 			return nil, fmt.Errorf("scanning request log: %w", err)
 		}
 		if model != nil {
 			log.Model = *model
+		}
+		if provider != nil {
+			log.Provider = *provider
 		}
 		logs = append(logs, log)
 	}

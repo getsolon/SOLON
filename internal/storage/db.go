@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -104,13 +105,48 @@ func (d *DB) migrate() error {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_guardrail_events_request ON guardrail_events(request_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_guardrail_events_action ON guardrail_events(action)`,
+
+		// V1.1 Milestone 1: Per-key tunnel access control
+		`ALTER TABLE api_keys ADD COLUMN tunnel_access BOOLEAN DEFAULT TRUE`,
+
+		// V1.1 Milestone 2: Key expiry and model restrictions
+		`ALTER TABLE api_keys ADD COLUMN expires_at DATETIME`,
+		`ALTER TABLE api_keys ADD COLUMN allowed_models TEXT`, // JSON array, null = all models
+
+		// V1.2: External API providers
+		`CREATE TABLE IF NOT EXISTS providers (
+			id         TEXT PRIMARY KEY,
+			name       TEXT NOT NULL UNIQUE,
+			base_url   TEXT NOT NULL,
+			api_key    TEXT NOT NULL,
+			enabled    BOOLEAN DEFAULT TRUE,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`ALTER TABLE requests ADD COLUMN provider TEXT`,
 	}
 
 	for _, m := range migrations {
 		if _, err := d.db.Exec(m); err != nil {
+			// ALTER TABLE ADD COLUMN fails if column already exists — safe to ignore
+			if isAlterTableDuplicate(m, err) {
+				continue
+			}
 			return fmt.Errorf("migration failed: %w", err)
 		}
 	}
 
 	return nil
+}
+
+// isAlterTableDuplicate returns true if the error is from adding a column that already exists.
+func isAlterTableDuplicate(sql string, err error) bool {
+	if err == nil {
+		return false
+	}
+	s := err.Error()
+	return (len(s) > 0 && (containsStr(s, "duplicate column") || containsStr(s, "already exists")))
+}
+
+func containsStr(s, substr string) bool {
+	return len(s) >= len(substr) && strings.Contains(s, substr)
 }

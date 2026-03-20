@@ -13,6 +13,7 @@ import (
 	"github.com/openclaw/solon/internal/dashboard"
 	"github.com/openclaw/solon/internal/guardrails"
 	"github.com/openclaw/solon/internal/inference"
+	"github.com/openclaw/solon/internal/inference/backends"
 	"github.com/openclaw/solon/internal/models"
 	"github.com/openclaw/solon/internal/storage"
 	"github.com/openclaw/solon/internal/tunnel"
@@ -25,8 +26,16 @@ type Config struct {
 	Engine     *inference.Engine
 	Store      *storage.DB
 	Tunnel     tunnel.Tunnel
+	Relay      RemoteAccess
 	Guardrails *guardrails.Config
 	Policies   *guardrails.PolicyStore
+}
+
+// RemoteAccess provides relay status info (optional).
+type RemoteAccess interface {
+	RemoteURL() string
+	Connected() bool
+	Status() map[string]any
 }
 
 // Gateway is the main HTTP server that handles auth, routing, and middleware.
@@ -35,6 +44,7 @@ type Gateway struct {
 	engine     *inference.Engine
 	store      *storage.DB
 	tunnel     tunnel.Tunnel
+	relay      RemoteAccess
 	port       int
 	version    string
 	guardrails *guardrails.Config
@@ -59,6 +69,7 @@ func New(cfg Config) (*Gateway, error) {
 		engine:     cfg.Engine,
 		store:      cfg.Store,
 		tunnel:     cfg.Tunnel,
+		relay:      cfg.Relay,
 		port:       cfg.Port,
 		version:    cfg.Version,
 		guardrails: grCfg,
@@ -79,8 +90,9 @@ func (g *Gateway) setupRoutes() {
 	r.Use(CORS)
 	r.Use(Recovery)
 
-	// Health check (no auth required)
+	// Health check + system info (no auth required, localhost only for system)
 	r.Get("/api/v1/health", g.handleHealth)
+	r.Get("/api/v1/system", g.handleSystemInfo)
 
 	// OpenAI-compatible inference API (localhost bypass for dashboard, auth for remote)
 	r.Group(func(r chi.Router) {
@@ -105,22 +117,40 @@ func (g *Gateway) setupRoutes() {
 
 		// Model management
 		r.Get("/api/v1/models", g.handleListModelsDetailed)
+		r.Get("/api/v1/models/loaded", g.handleLoadedModels)
 		r.Post("/api/v1/models/pull", g.handlePullModel)
 		r.Delete("/api/v1/models/{name}", g.handleDeleteModel)
 
 		// Analytics
 		r.Get("/api/v1/analytics/requests", g.handleRequestLog)
 		r.Get("/api/v1/analytics/usage", g.handleUsageStats)
+		r.Get("/api/v1/analytics/usage/keys", g.handleUsageByKey)
 		r.Get("/api/v1/analytics/guardrails", g.handleGuardrailEvents)
 
-		// Tunnel
+		// Model catalog
+		r.Get("/api/v1/models/catalog", g.handleModelCatalog)
+
+		// Tunnel (legacy)
 		r.Get("/api/v1/tunnel/status", g.handleTunnelStatus)
 		r.Post("/api/v1/tunnel/enable", g.handleTunnelEnable)
 		r.Post("/api/v1/tunnel/disable", g.handleTunnelDisable)
+
+		// Remote access (relay)
+		r.Get("/api/v1/remote/status", g.handleRemoteStatus)
+
+		// Provider management
+		r.Get("/api/v1/providers", g.handleListProviders)
+		r.Post("/api/v1/providers", g.handleAddProvider)
+		r.Delete("/api/v1/providers/{name}", g.handleDeleteProvider)
 	})
 
 	// Dashboard — serve embedded static files (no auth, localhost only)
 	r.Handle("/*", dashboard.Handler())
+}
+
+// SetRelay sets the remote access provider (can be called after construction).
+func (g *Gateway) SetRelay(r RemoteAccess) {
+	g.relay = r
 }
 
 // ListenAndServe starts the HTTP server.
@@ -152,6 +182,12 @@ func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 	if err := validateChatRequest(&req); err != nil {
 		g.logGuardrailEvent(r, req.Model, "gate", "block", err.Error(), 0)
 		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check per-key model restrictions
+	if err := CheckModelAccess(r, req.Model); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
 		return
 	}
 
@@ -193,9 +229,10 @@ func (g *Gateway) handleChatCompletions(w http.ResponseWriter, r *http.Request) 
 
 	// Log request
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		prov, _ := backends.ParseProviderModel(req.Model)
 		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
-			int(time.Since(start).Milliseconds()), http.StatusOK)
+			int(time.Since(start).Milliseconds()), http.StatusOK, prov)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -261,8 +298,9 @@ func (g *Gateway) handleChatCompletionsStream(w http.ResponseWriter, r *http.Req
 
 	// Log request
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		prov, _ := backends.ParseProviderModel(req.Model)
 		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
-			0, totalCompletion, int(time.Since(start).Milliseconds()), http.StatusOK)
+			0, totalCompletion, int(time.Since(start).Milliseconds()), http.StatusOK, prov)
 	}
 }
 
@@ -288,6 +326,12 @@ func (g *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check per-key model restrictions
+	if err := CheckModelAccess(r, req.Model); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
 	start := time.Now()
 
 	resp, err := g.engine.TextCompletion(r.Context(), &req)
@@ -297,9 +341,10 @@ func (g *Gateway) handleCompletions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		prov, _ := backends.ParseProviderModel(req.Model)
 		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, resp.Usage.CompletionTokens,
-			int(time.Since(start).Milliseconds()), http.StatusOK)
+			int(time.Since(start).Milliseconds()), http.StatusOK, prov)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -337,6 +382,12 @@ func (g *Gateway) handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Check per-key model restrictions
+	if err := CheckModelAccess(r, raw.Model); err != nil {
+		writeError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
 	req := &inference.EmbeddingRequest{
 		Model: raw.Model,
 		Input: input,
@@ -351,9 +402,10 @@ func (g *Gateway) handleEmbeddings(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		prov, _ := backends.ParseProviderModel(req.Model)
 		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, req.Model,
 			resp.Usage.PromptTokens, 0,
-			int(time.Since(start).Milliseconds()), http.StatusOK)
+			int(time.Since(start).Milliseconds()), http.StatusOK, prov)
 	}
 
 	writeJSON(w, http.StatusOK, resp)
@@ -403,6 +455,15 @@ func (g *Gateway) handleHealth(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (g *Gateway) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
+	totalBytes := totalMemoryBytes()
+	totalMB := totalBytes / (1024 * 1024)
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"total_memory_mb": totalMB,
+	})
+}
+
 func (g *Gateway) handleListKeys(w http.ResponseWriter, r *http.Request) {
 	keys, err := g.store.ListKeys()
 	if err != nil {
@@ -414,8 +475,12 @@ func (g *Gateway) handleListKeys(w http.ResponseWriter, r *http.Request) {
 
 func (g *Gateway) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		Name  string `json:"name"`
-		Scope string `json:"scope"`
+		Name          string   `json:"name"`
+		Scope         string   `json:"scope"`
+		RateLimit     int      `json:"rate_limit"`
+		TTLSeconds    int      `json:"ttl_seconds"`
+		AllowedModels []string `json:"allowed_models"`
+		TunnelAccess  *bool    `json:"tunnel_access"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -441,7 +506,18 @@ func (g *Gateway) handleCreateKey(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	key, err := g.store.CreateKey(req.Name, req.Scope)
+	opts := storage.CreateKeyOptions{
+		Name:          req.Name,
+		Scope:         req.Scope,
+		RateLimit:     req.RateLimit,
+		AllowedModels: req.AllowedModels,
+		TunnelAccess:  req.TunnelAccess,
+	}
+	if req.TTLSeconds > 0 {
+		opts.TTL = time.Duration(req.TTLSeconds) * time.Second
+	}
+
+	key, err := g.store.CreateKeyWithOptions(opts)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -558,6 +634,14 @@ func (g *Gateway) handleUsageStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+func (g *Gateway) handleRemoteStatus(w http.ResponseWriter, r *http.Request) {
+	if g.relay == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"enabled": false})
+		return
+	}
+	writeJSON(w, http.StatusOK, g.relay.Status())
+}
+
 func (g *Gateway) handleTunnelStatus(w http.ResponseWriter, r *http.Request) {
 	if g.tunnel == nil {
 		writeJSON(w, http.StatusOK, map[string]any{"enabled": false, "provider": ""})
@@ -596,6 +680,25 @@ func (g *Gateway) handleTunnelDisable(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "disabled"})
 }
 
+func (g *Gateway) handleUsageByKey(w http.ResponseWriter, r *http.Request) {
+	usage, err := g.store.GetUsageByKey()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"usage": usage})
+}
+
+func (g *Gateway) handleLoadedModels(w http.ResponseWriter, r *http.Request) {
+	loaded := g.engine.LoadedModelsInfo()
+	writeJSON(w, http.StatusOK, map[string]any{"loaded": loaded})
+}
+
+func (g *Gateway) handleModelCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog := models.GetCatalog()
+	writeJSON(w, http.StatusOK, map[string]any{"models": catalog})
+}
+
 func (g *Gateway) handleGuardrailEvents(w http.ResponseWriter, r *http.Request) {
 	events, err := g.store.GetGuardrailEvents(100)
 	if err != nil {
@@ -607,6 +710,71 @@ func (g *Gateway) handleGuardrailEvents(w http.ResponseWriter, r *http.Request) 
 		"events": events,
 		"stats":  stats,
 	})
+}
+
+// --- Provider management handlers ---
+
+func (g *Gateway) handleListProviders(w http.ResponseWriter, r *http.Request) {
+	providers, err := g.store.ListProviders()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"providers": providers})
+}
+
+func (g *Gateway) handleAddProvider(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Name    string `json:"name"`
+		BaseURL string `json:"base_url"`
+		APIKey  string `json:"api_key"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if req.Name == "" || req.APIKey == "" {
+		writeError(w, http.StatusBadRequest, "name and api_key are required")
+		return
+	}
+
+	// Auto-fill base_url from well-known defaults
+	if req.BaseURL == "" {
+		if url, ok := storage.WellKnownProviders[req.Name]; ok {
+			req.BaseURL = url
+		} else {
+			writeError(w, http.StatusBadRequest, "base_url is required for unknown providers")
+			return
+		}
+	}
+
+	provider, err := g.store.CreateProvider(req.Name, req.BaseURL, req.APIKey)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	// Hot-reload into engine
+	g.engine.AddProvider(backends.Provider{
+		Name:    req.Name,
+		BaseURL: req.BaseURL,
+		APIKey:  req.APIKey,
+	})
+
+	writeJSON(w, http.StatusCreated, provider)
+}
+
+func (g *Gateway) handleDeleteProvider(w http.ResponseWriter, r *http.Request) {
+	name := chi.URLParam(r, "name")
+	if err := g.store.DeleteProvider(name); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+
+	// Hot-remove from engine
+	g.engine.RemoveProvider(name)
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

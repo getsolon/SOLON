@@ -8,25 +8,53 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"github.com/openclaw/solon/internal/inference/backends"
 	"github.com/openclaw/solon/internal/models"
 )
 
+// LoadedModel tracks a loaded model with LRU metadata.
+type LoadedModel struct {
+	Model    *backends.Model
+	Backend  backends.Backend
+	LastUsed int64 // unix timestamp
+	SizeMB   int64
+}
+
 // Engine orchestrates model loading, unloading, and inference requests.
 type Engine struct {
-	backends    []backends.Backend
-	ollama      *backends.Ollama
-	llamacpp    *backends.LlamaCpp
-	registry    *models.Registry
-	activeModel *backends.Model
-	mu          sync.RWMutex
+	backends     []backends.Backend
+	ollama       *backends.Ollama
+	llamacpp     *backends.LlamaCpp
+	proxy        *backends.ProxyBackend
+	registry     *models.Registry
+	loadedModels map[string]*LoadedModel // model name → loaded model
+	memBudgetMB  int64                   // memory budget in MB (0 = auto)
+	preload      []string                // models to preload
+	mu           sync.RWMutex
+}
+
+// EngineOptions configures the engine.
+type EngineOptions struct {
+	MemoryBudgetMB int64              // 0 = auto (80% system RAM)
+	Preload        []string           // models to preload at startup
+	Providers      []backends.Provider // external API providers for proxy backend
 }
 
 // NewEngine creates a new inference engine and registers available backends.
 // It prefers the native llama.cpp backend (in-process) over Ollama (external process).
 func NewEngine() (*Engine, error) {
-	e := &Engine{}
+	return NewEngineWithOptions(EngineOptions{})
+}
+
+// NewEngineWithOptions creates a new inference engine with custom options.
+func NewEngineWithOptions(opts EngineOptions) (*Engine, error) {
+	e := &Engine{
+		loadedModels: make(map[string]*LoadedModel),
+		memBudgetMB:  opts.MemoryBudgetMB,
+		preload:      opts.Preload,
+	}
 
 	// Initialize model registry
 	dataDir, err := models.DataDir()
@@ -60,25 +88,167 @@ func NewEngine() (*Engine, error) {
 		e.backends = append(e.backends, ollama)
 	}
 
+	// Proxy backend for external API providers (Anthropic, OpenAI, etc.)
+	if len(opts.Providers) > 0 {
+		e.proxy = backends.NewProxyBackend()
+		for _, p := range opts.Providers {
+			e.proxy.AddProvider(p)
+		}
+		e.backends = append(e.backends, e.proxy)
+	}
+
 	if len(e.backends) == 0 {
-		return nil, fmt.Errorf("no inference backends available — install models with 'solon models pull' or start Ollama")
+		return nil, fmt.Errorf("no inference backends available — install models with 'solon models pull', start Ollama, or add a provider with 'solon providers add'")
+	}
+
+	// Preload models if specified
+	for _, name := range e.preload {
+		if _, err := e.ensureLoaded(name); err != nil {
+			log.Printf("Warning: could not preload model %s: %v", name, err)
+		} else {
+			log.Printf("Preloaded model: %s", name)
+		}
 	}
 
 	return e, nil
 }
 
-// Close shuts down the engine and unloads any active model.
+// Close shuts down the engine and unloads all loaded models.
 func (e *Engine) Close() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	if e.activeModel != nil {
-		for _, b := range e.backends {
-			_ = b.UnloadModel(context.Background(), e.activeModel)
-		}
-		e.activeModel = nil
+	for name, lm := range e.loadedModels {
+		_ = lm.Backend.UnloadModel(context.Background(), lm.Model)
+		delete(e.loadedModels, name)
 	}
 	return nil
+}
+
+// LoadedModelsInfo returns info about currently loaded models.
+func (e *Engine) LoadedModelsInfo() []map[string]any {
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+
+	var result []map[string]any
+	for name, lm := range e.loadedModels {
+		result = append(result, map[string]any{
+			"name":      name,
+			"backend":   lm.Backend.Name(),
+			"last_used": time.Unix(lm.LastUsed, 0).Format(time.RFC3339),
+			"size_mb":   lm.SizeMB,
+		})
+	}
+	return result
+}
+
+// ensureLoaded ensures a model is loaded, evicting LRU models if needed.
+func (e *Engine) ensureLoaded(model string) (backends.Backend, error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	// Already loaded? Update LRU timestamp.
+	if lm, ok := e.loadedModels[model]; ok {
+		lm.LastUsed = time.Now().Unix()
+		return lm.Backend, nil
+	}
+
+	// Select backend
+	backend, err := e.selectBackend(model)
+	if err != nil {
+		return nil, err
+	}
+
+	// For Ollama and proxy backends, we don't manage loading ourselves
+	if backend == e.ollama || backend == e.proxy {
+		e.loadedModels[model] = &LoadedModel{
+			Backend:  backend,
+			LastUsed: time.Now().Unix(),
+		}
+		return backend, nil
+	}
+
+	// Evict LRU models if we're at capacity (max 3 native models by default)
+	maxLoaded := 3
+	nativeCount := 0
+	for _, lm := range e.loadedModels {
+		if lm.Backend != e.ollama && lm.Backend != e.proxy {
+			nativeCount++
+		}
+	}
+	for nativeCount >= maxLoaded {
+		e.evictLRU()
+		nativeCount--
+	}
+
+	// Resolve model path for native backend
+	var modelPath string
+	if e.registry != nil {
+		modelPath, _ = e.registry.Resolve(model)
+	}
+
+	// Load the model
+	modelObj := &backends.Model{Name: model, Path: modelPath}
+	if err := backend.LoadModel(context.Background(), modelObj); err != nil {
+		return nil, fmt.Errorf("loading model %s: %w", model, err)
+	}
+
+	e.loadedModels[model] = &LoadedModel{
+		Model:    modelObj,
+		Backend:  backend,
+		LastUsed: time.Now().Unix(),
+	}
+
+	return backend, nil
+}
+
+// evictLRU unloads the least recently used non-Ollama model.
+func (e *Engine) evictLRU() {
+	var oldestName string
+	var oldestTime int64 = 1<<63 - 1
+
+	for name, lm := range e.loadedModels {
+		if lm.Backend == e.ollama || lm.Backend == e.proxy {
+			continue // don't evict externally-managed models
+		}
+		if lm.LastUsed < oldestTime {
+			oldestTime = lm.LastUsed
+			oldestName = name
+		}
+	}
+
+	if oldestName != "" {
+		lm := e.loadedModels[oldestName]
+		if lm.Model != nil {
+			_ = lm.Backend.UnloadModel(context.Background(), lm.Model)
+		}
+		delete(e.loadedModels, oldestName)
+		log.Printf("Evicted model %s (LRU)", oldestName)
+	}
+}
+
+// selectBackend picks the right backend for a model without locking.
+func (e *Engine) selectBackend(model string) (backends.Backend, error) {
+	// Check proxy backend for "provider/model" format
+	if e.proxy != nil {
+		provName, _ := backends.ParseProviderModel(model)
+		if provName != "" && e.proxy.HasProvider(provName) {
+			return e.proxy, nil
+		}
+	}
+
+	if e.llamacpp != nil && e.registry != nil {
+		if _, err := e.registry.Resolve(model); err == nil {
+			return e.llamacpp, nil
+		}
+	}
+	if e.ollama != nil {
+		return e.ollama, nil
+	}
+	if len(e.backends) > 0 {
+		return e.backends[0], nil
+	}
+	return nil, fmt.Errorf("no inference backends available")
 }
 
 // ChatCompletion performs a chat completion using the best available backend.
@@ -155,6 +325,19 @@ func (e *Engine) ListModels(ctx context.Context) ([]ModelInfo, error) {
 					Name:     m.Name,
 					Size:     m.Size,
 					Modified: m.PulledAt,
+				})
+				seen[m.Name] = true
+			}
+		}
+	}
+
+	// List proxy models (external providers)
+	if e.proxy != nil {
+		for _, m := range e.proxy.ListAvailableModels() {
+			if !seen[m.Name] {
+				allModels = append(allModels, ModelInfo{
+					Name:   m.Name,
+					Format: "proxy",
 				})
 				seen[m.Name] = true
 			}
@@ -312,28 +495,36 @@ func (e *Engine) ChatCompletionStream(ctx context.Context, req *ChatCompletionRe
 	return backend.CompleteStream(ctx, completionReq)
 }
 
+// AddProvider adds an external API provider to the proxy backend at runtime.
+func (e *Engine) AddProvider(p backends.Provider) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.proxy == nil {
+		e.proxy = backends.NewProxyBackend()
+		e.backends = append(e.backends, e.proxy)
+	}
+	e.proxy.AddProvider(p)
+}
+
+// RemoveProvider removes an external API provider from the proxy backend at runtime.
+func (e *Engine) RemoveProvider(name string) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	if e.proxy != nil {
+		e.proxy.RemoveProvider(name)
+	}
+}
+
 // backendForModel selects the best backend for a given model.
-// If the model is available natively (via registry), prefer llama.cpp.
-// Otherwise fall back to Ollama if the model might be there.
+// Auto-loads the model on first request; evicts LRU when at capacity.
 func (e *Engine) backendForModel(model string) (backends.Backend, error) {
 	if len(e.backends) == 0 {
 		return nil, fmt.Errorf("no inference backends available")
 	}
 
-	// If we have the native backend and the model is in the registry, use it
-	if e.llamacpp != nil && e.registry != nil {
-		if _, err := e.registry.Resolve(model); err == nil {
-			return e.llamacpp, nil
-		}
-	}
-
-	// If Ollama is available, try it (it manages its own models)
-	if e.ollama != nil {
-		return e.ollama, nil
-	}
-
-	// Fall back to first available backend
-	return e.backends[0], nil
+	return e.ensureLoaded(model)
 }
 
 func toBackendMessages(messages []ChatMessage) []backends.Message {

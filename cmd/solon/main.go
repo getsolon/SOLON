@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -12,9 +14,12 @@ import (
 	"github.com/openclaw/solon/internal/gateway"
 	"github.com/openclaw/solon/internal/guardrails"
 	"github.com/openclaw/solon/internal/inference"
+	"github.com/openclaw/solon/internal/inference/backends"
 	"github.com/openclaw/solon/internal/models"
+	"github.com/openclaw/solon/internal/relay"
 	"github.com/openclaw/solon/internal/storage"
 	"github.com/openclaw/solon/internal/tunnel"
+	"github.com/openclaw/solon/internal/update"
 )
 
 var version = "dev"
@@ -30,9 +35,11 @@ func main() {
 		serveCmd(),
 		modelsCmd(),
 		keysCmd(),
+		providersCmd(),
 		tunnelCmd(),
 		statusCmd(),
 		versionCmd(),
+		updateCmd(),
 	)
 
 	if err := root.Execute(); err != nil {
@@ -43,6 +50,9 @@ func main() {
 func serveCmd() *cobra.Command {
 	var port int
 	var enableTunnel bool
+	var enableRemote bool
+	var preload string
+	var memBudget int64
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -71,19 +81,62 @@ func serveCmd() *cobra.Command {
 				fmt.Println()
 				fmt.Println("  Save this key — it won't be shown again.")
 				fmt.Println()
+				fmt.Println("  Test it with:")
+				fmt.Printf("  curl http://localhost:%d/v1/models -H \"Authorization: Bearer %s\"\n", port, key.Raw)
+				fmt.Println()
+				fmt.Println("  Get started by pulling a model:")
+				fmt.Println("  solon models pull llama3.2:3b")
+				fmt.Println()
 			}
 
-			engine, err := inference.NewEngine()
+			var preloadModels []string
+			if preload != "" {
+				for _, m := range strings.Split(preload, ",") {
+					m = strings.TrimSpace(m)
+					if m != "" {
+						preloadModels = append(preloadModels, m)
+					}
+				}
+			}
+
+			// Load external API providers from database
+			var providers []backends.Provider
+			dbProviders, err := db.LoadProviders()
+			if err != nil {
+				log.Printf("Warning: could not load providers: %v", err)
+			} else {
+				for _, p := range dbProviders {
+					providers = append(providers, backends.Provider{
+						Name:    p.Name,
+						BaseURL: p.BaseURL,
+						APIKey:  p.APIKey,
+					})
+				}
+				if len(providers) > 0 {
+					log.Printf("Loaded %d external provider(s)", len(providers))
+				}
+			}
+
+			engine, err := inference.NewEngineWithOptions(inference.EngineOptions{
+				MemoryBudgetMB: memBudget,
+				Preload:        preloadModels,
+				Providers:      providers,
+			})
 			if err != nil {
 				return fmt.Errorf("starting inference engine: %w", err)
 			}
 			defer func() { _ = engine.Close() }()
 
-			t := tunnel.NewCloudflare(port)
+			// Initialize tunnel with credential store
+			creds, _ := tunnel.DefaultCredentialStore()
+			t := tunnel.NewCloudflare(port, creds)
 
 			// Load guardrails config and policies
 			grCfg := guardrails.LoadConfig(guardrails.ConfigPath())
 			policies := guardrails.NewPolicyStore(guardrails.PoliciesDir())
+
+			// Optional: refresh catalog from remote on startup
+			go models.RefreshCatalogFromRemote("https://getsolon.dev/catalog.json")
 
 			gw, err := gateway.New(gateway.Config{
 				Port:       port,
@@ -101,12 +154,46 @@ func serveCmd() *cobra.Command {
 			fmt.Printf("Solon is running at http://localhost:%d\n", port)
 			fmt.Printf("Dashboard: http://localhost:%d\n", port)
 
+			// Background version check
+			go func() {
+				result, err := update.CheckLatestCached(version)
+				if err == nil && result.UpdateAvail {
+					fmt.Printf("\n  Update available: %s → %s (run 'solon update' to upgrade)\n\n", result.CurrentVersion, result.LatestVersion)
+				}
+			}()
+
 			if enableTunnel {
-				fmt.Println("Starting tunnel...")
+				if t.IsPersistent() || (creds != nil && creds.Exists()) {
+					fmt.Println("Starting persistent tunnel...")
+				} else {
+					fmt.Println("Starting tunnel (ephemeral — run 'solon tunnel setup' for a persistent URL)...")
+				}
 				if err := t.Enable(cmd.Context()); err != nil {
 					fmt.Printf("Warning: tunnel failed to start: %v\n", err)
 				} else {
 					fmt.Printf("Tunnel: %s\n", t.URL())
+				}
+			}
+
+			if enableRemote {
+				instanceID, err := relay.EnsureRegistered()
+				if err != nil {
+					fmt.Printf("Warning: remote access setup failed: %v\n", err)
+				} else {
+					rc := relay.NewClient(instanceID, port, version)
+					gw.SetRelay(rc)
+					go func() {
+						if err := rc.Start(cmd.Context()); err != nil {
+							log.Printf("relay: %v", err)
+						}
+					}()
+					// Wait briefly for connection
+					time.Sleep(2 * time.Second)
+					if rc.Connected() {
+						fmt.Printf("Remote: %s\n", rc.RemoteURL())
+					} else {
+						fmt.Println("Remote: connecting...")
+					}
 				}
 			}
 
@@ -116,6 +203,9 @@ func serveCmd() *cobra.Command {
 
 	cmd.Flags().IntVarP(&port, "port", "p", 8420, "Port to listen on")
 	cmd.Flags().BoolVar(&enableTunnel, "tunnel", false, "Enable Cloudflare tunnel on startup")
+	cmd.Flags().BoolVar(&enableRemote, "remote", false, "Enable remote access via Solon Relay")
+	cmd.Flags().StringVar(&preload, "preload", "", "Comma-separated models to preload (e.g. llama3.2:3b,mistral:7b)")
+	cmd.Flags().Int64Var(&memBudget, "memory-budget", 0, "Memory budget in MB (0 = auto, 80% system RAM)")
 	return cmd
 }
 
@@ -347,6 +437,10 @@ func keysCmd() *cobra.Command {
 
 	var keyName string
 	var keyScope string
+	var keyRateLimit int
+	var keyTTL string
+	var keyModels string
+	var noTunnel bool
 
 	createCmd := &cobra.Command{
 		Use:   "create",
@@ -362,7 +456,35 @@ func keysCmd() *cobra.Command {
 			}
 			defer func() { _ = db.Close() }()
 
-			key, err := db.CreateKey(keyName, keyScope)
+			opts := storage.CreateKeyOptions{
+				Name:      keyName,
+				Scope:     keyScope,
+				RateLimit: keyRateLimit,
+			}
+
+			if noTunnel {
+				f := false
+				opts.TunnelAccess = &f
+			}
+
+			// Parse TTL
+			if keyTTL != "" {
+				d, err := parseTTL(keyTTL)
+				if err != nil {
+					return fmt.Errorf("invalid TTL %q: %w", keyTTL, err)
+				}
+				opts.TTL = d
+			}
+
+			// Parse model restrictions
+			if keyModels != "" {
+				opts.AllowedModels = strings.Split(keyModels, ",")
+				for i := range opts.AllowedModels {
+					opts.AllowedModels[i] = strings.TrimSpace(opts.AllowedModels[i])
+				}
+			}
+
+			key, err := db.CreateKeyWithOptions(opts)
 			if err != nil {
 				return fmt.Errorf("creating key: %w", err)
 			}
@@ -372,6 +494,16 @@ func keysCmd() *cobra.Command {
 			fmt.Printf("  Key:   %s\n", key.Raw)
 			fmt.Printf("  Name:  %s\n", key.Name)
 			fmt.Printf("  Scope: %s\n", key.Scope)
+			fmt.Printf("  Rate:  %d/min\n", key.RateLimit)
+			if key.ExpiresAt != nil {
+				fmt.Printf("  Expires: %s\n", key.ExpiresAt.Format("2006-01-02 15:04"))
+			}
+			if len(key.AllowedModels) > 0 {
+				fmt.Printf("  Models: %s\n", strings.Join(key.AllowedModels, ", "))
+			}
+			if !key.TunnelAccess {
+				fmt.Printf("  Tunnel: disabled\n")
+			}
 			fmt.Println()
 			fmt.Println("Save this key — it won't be shown again.")
 			return nil
@@ -379,6 +511,10 @@ func keysCmd() *cobra.Command {
 	}
 	createCmd.Flags().StringVar(&keyName, "name", "", "Name for the API key")
 	createCmd.Flags().StringVar(&keyScope, "scope", "user", "Key scope: 'admin' or 'user'")
+	createCmd.Flags().IntVar(&keyRateLimit, "rate-limit", 0, "Requests per minute (0 = default 60)")
+	createCmd.Flags().StringVar(&keyTTL, "ttl", "", "Time-to-live (e.g., 30d, 24h, 7d)")
+	createCmd.Flags().StringVar(&keyModels, "models", "", "Comma-separated list of allowed models")
+	createCmd.Flags().BoolVar(&noTunnel, "no-tunnel", false, "Disable tunnel access for this key")
 	_ = createCmd.MarkFlagRequired("name")
 
 	cmd.AddCommand(
@@ -403,9 +539,21 @@ func keysCmd() *cobra.Command {
 					return nil
 				}
 
-				fmt.Printf("%-20s %-15s %-10s %-20s\n", "NAME", "PREFIX", "SCOPE", "CREATED")
+				fmt.Printf("%-20s %-15s %-10s %-8s %-12s %-20s\n", "NAME", "PREFIX", "SCOPE", "RATE", "EXPIRES", "CREATED")
 				for _, k := range keys {
-					fmt.Printf("%-20s %-15s %-10s %-20s\n", k.Name, k.Prefix+"...", k.Scope, k.CreatedAt.Format("2006-01-02 15:04"))
+					expires := "never"
+					if k.ExpiresAt != nil {
+						if time.Now().After(*k.ExpiresAt) {
+							expires = "EXPIRED"
+						} else {
+							expires = k.ExpiresAt.Format("2006-01-02")
+						}
+					}
+					fmt.Printf("%-20s %-15s %-10s %-8s %-12s %-20s\n",
+						k.Name, k.Prefix+"...", k.Scope,
+						fmt.Sprintf("%d/m", k.RateLimit),
+						expires,
+						k.CreatedAt.Format("2006-01-02 15:04"))
 				}
 				return nil
 			},
@@ -434,6 +582,120 @@ func keysCmd() *cobra.Command {
 	return cmd
 }
 
+func providersCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "providers",
+		Short: "Manage external API providers",
+	}
+
+	var apiKey string
+	var baseURL string
+
+	addCmd := &cobra.Command{
+		Use:   "add [name]",
+		Short: "Add an external API provider (e.g., anthropic, openai)",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+
+			if apiKey == "" {
+				return fmt.Errorf("--api-key is required")
+			}
+
+			// Auto-fill base URL from well-known defaults
+			if baseURL == "" {
+				if url, ok := storage.WellKnownProviders[name]; ok {
+					baseURL = url
+				} else {
+					return fmt.Errorf("--base-url is required for unknown provider %q", name)
+				}
+			}
+
+			db, err := storage.Open("")
+			if err != nil {
+				return fmt.Errorf("opening database: %w", err)
+			}
+			defer func() { _ = db.Close() }()
+
+			provider, err := db.CreateProvider(name, baseURL, apiKey)
+			if err != nil {
+				return fmt.Errorf("adding provider: %w", err)
+			}
+
+			fmt.Printf("Provider added: %s\n", provider.Name)
+			fmt.Printf("  Base URL: %s\n", provider.BaseURL)
+			fmt.Printf("  API Key:  %s\n", provider.APIKey)
+			fmt.Println()
+			fmt.Println("Use models with the provider/ prefix:")
+			switch name {
+			case "anthropic":
+				fmt.Println("  anthropic/claude-sonnet-4-20250514")
+			case "openai":
+				fmt.Println("  openai/gpt-4o")
+			default:
+				fmt.Printf("  %s/<model-name>\n", name)
+			}
+			return nil
+		},
+	}
+	addCmd.Flags().StringVar(&apiKey, "api-key", "", "API key for the provider")
+	addCmd.Flags().StringVar(&baseURL, "base-url", "", "Base URL (auto-detected for anthropic/openai)")
+	_ = addCmd.MarkFlagRequired("api-key")
+
+	cmd.AddCommand(
+		addCmd,
+		&cobra.Command{
+			Use:   "list",
+			Short: "List configured providers",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				providers, err := db.ListProviders()
+				if err != nil {
+					return err
+				}
+
+				if len(providers) == 0 {
+					fmt.Println("No providers configured. Run 'solon providers add <name> --api-key <key>' to add one.")
+					return nil
+				}
+
+				fmt.Printf("%-15s %-40s %-12s %-20s\n", "NAME", "BASE URL", "API KEY", "CREATED")
+				for _, p := range providers {
+					fmt.Printf("%-15s %-40s %-12s %-20s\n",
+						p.Name, p.BaseURL, p.APIKey, p.CreatedAt.Format("2006-01-02 15:04"))
+				}
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "remove [name]",
+			Short: "Remove a provider",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				if err := db.DeleteProvider(args[0]); err != nil {
+					return fmt.Errorf("removing provider: %w", err)
+				}
+
+				fmt.Printf("Provider %s removed.\n", args[0])
+				return nil
+			},
+		},
+	)
+
+	return cmd
+}
+
 func tunnelCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tunnel",
@@ -442,14 +704,34 @@ func tunnelCmd() *cobra.Command {
 
 	cmd.AddCommand(
 		&cobra.Command{
+			Use:   "setup",
+			Short: "Set up a persistent named tunnel (one-time setup)",
+			Long:  "Walks through Cloudflare authentication, creates a named tunnel, and stores credentials for persistent URLs that survive restarts.",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				creds, err := tunnel.DefaultCredentialStore()
+				if err != nil {
+					return fmt.Errorf("initializing credential store: %w", err)
+				}
+
+				t := tunnel.NewCloudflare(8420, creds)
+				return t.Setup(cmd.Context())
+			},
+		},
+		&cobra.Command{
 			Use:   "enable",
 			Short: "Enable secure tunnel to expose API to the internet",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				t := tunnel.NewCloudflare(8420)
+				creds, _ := tunnel.DefaultCredentialStore()
+				t := tunnel.NewCloudflare(8420, creds)
 				if err := t.Enable(cmd.Context()); err != nil {
 					return fmt.Errorf("enabling tunnel: %w", err)
 				}
 				fmt.Printf("Tunnel enabled: %s\n", t.URL())
+				if t.IsPersistent() {
+					fmt.Println("(persistent — URL survives restarts)")
+				} else {
+					fmt.Println("(ephemeral — run 'solon tunnel setup' for a persistent URL)")
+				}
 				return nil
 			},
 		},
@@ -457,7 +739,8 @@ func tunnelCmd() *cobra.Command {
 			Use:   "disable",
 			Short: "Disable secure tunnel",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				t := tunnel.NewCloudflare(8420)
+				creds, _ := tunnel.DefaultCredentialStore()
+				t := tunnel.NewCloudflare(8420, creds)
 				return t.Disable(cmd.Context())
 			},
 		},
@@ -465,7 +748,20 @@ func tunnelCmd() *cobra.Command {
 			Use:   "status",
 			Short: "Show tunnel status",
 			RunE: func(cmd *cobra.Command, args []string) error {
-				t := tunnel.NewCloudflare(8420)
+				creds, _ := tunnel.DefaultCredentialStore()
+				t := tunnel.NewCloudflare(8420, creds)
+
+				// Check for stored credentials
+				if creds != nil && creds.Exists() {
+					stored, _ := creds.Load()
+					if stored != nil {
+						fmt.Println("Tunnel: configured (persistent)")
+						fmt.Printf("URL:    %s\n", stored.URL)
+						fmt.Printf("ID:     %s\n", stored.TunnelID)
+						return nil
+					}
+				}
+
 				status, err := t.Status(cmd.Context())
 				if err != nil {
 					return err
@@ -474,7 +770,8 @@ func tunnelCmd() *cobra.Command {
 					fmt.Printf("Tunnel: enabled\n")
 					fmt.Printf("URL:    %s\n", status.URL)
 				} else {
-					fmt.Println("Tunnel: disabled")
+					fmt.Println("Tunnel: not configured")
+					fmt.Println("Run 'solon tunnel setup' to set up a persistent tunnel.")
 				}
 				return nil
 			},
@@ -528,4 +825,58 @@ func versionCmd() *cobra.Command {
 			fmt.Printf("solon version %s\n", version)
 		},
 	}
+}
+
+func updateCmd() *cobra.Command {
+	var force bool
+
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update Solon to the latest version",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf("Current version: %s\n", version)
+			fmt.Println("Checking for updates...")
+
+			result, err := update.CheckLatest(version)
+			if err != nil {
+				return fmt.Errorf("checking for updates: %w", err)
+			}
+
+			if !result.UpdateAvail && !force {
+				fmt.Printf("Already at latest version (%s).\n", result.CurrentVersion)
+				return nil
+			}
+
+			fmt.Printf("New version available: %s\n", result.LatestVersion)
+
+			if err := update.DoUpdate(version); err != nil {
+				return fmt.Errorf("updating: %w", err)
+			}
+
+			fmt.Printf("Solon updated to %s successfully!\n", result.LatestVersion)
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&force, "force", false, "Force update even if already at latest version")
+	return cmd
+}
+
+// parseTTL parses a human-friendly duration string like "30d", "24h", "7d".
+func parseTTL(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return 0, fmt.Errorf("empty TTL")
+	}
+
+	// Handle day suffix
+	if strings.HasSuffix(s, "d") {
+		var days int
+		if _, err := fmt.Sscanf(s, "%dd", &days); err == nil && days > 0 {
+			return time.Duration(days) * 24 * time.Hour, nil
+		}
+	}
+
+	// Fall back to standard Go duration parsing
+	return time.ParseDuration(s)
 }
