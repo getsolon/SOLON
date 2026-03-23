@@ -16,6 +16,7 @@ import (
 	"github.com/openclaw/solon/internal/inference"
 	"github.com/openclaw/solon/internal/inference/backends"
 	"github.com/openclaw/solon/internal/models"
+	"github.com/openclaw/solon/internal/sandbox"
 	"github.com/openclaw/solon/internal/storage"
 	"github.com/openclaw/solon/internal/tunnel"
 )
@@ -30,6 +31,7 @@ type Config struct {
 	Relay      RemoteAccess
 	Guardrails *guardrails.Config
 	Policies   *guardrails.PolicyStore
+	Sandboxes  *sandbox.Manager
 }
 
 // RemoteAccess provides relay status info (optional).
@@ -46,6 +48,7 @@ type Gateway struct {
 	store      *storage.DB
 	tunnel     tunnel.Tunnel
 	relay      RemoteAccess
+	sandboxes  *sandbox.Manager
 	port       int
 	version    string
 	guardrails *guardrails.Config
@@ -71,6 +74,7 @@ func New(cfg Config) (*Gateway, error) {
 		store:      cfg.Store,
 		tunnel:     cfg.Tunnel,
 		relay:      cfg.Relay,
+		sandboxes:  cfg.Sandboxes,
 		port:       cfg.Port,
 		version:    cfg.Version,
 		guardrails: grCfg,
@@ -151,6 +155,16 @@ func (g *Gateway) setupRoutes() {
 		r.Get("/api/v1/providers", g.handleListProviders)
 		r.Post("/api/v1/providers", g.handleAddProvider)
 		r.Delete("/api/v1/providers/{name}", g.handleDeleteProvider)
+
+		// Sandbox management
+		r.Get("/api/v1/sandboxes", g.handleListSandboxes)
+		r.Post("/api/v1/sandboxes", g.handleCreateSandbox)
+		r.Get("/api/v1/sandboxes/presets", g.handleListPresets)
+		r.Get("/api/v1/sandboxes/{id}", g.handleGetSandbox)
+		r.Post("/api/v1/sandboxes/{id}/start", g.handleStartSandbox)
+		r.Post("/api/v1/sandboxes/{id}/stop", g.handleStopSandbox)
+		r.Delete("/api/v1/sandboxes/{id}", g.handleRemoveSandbox)
+		r.Get("/api/v1/sandboxes/{id}/logs", g.handleSandboxLogs)
 	})
 
 	// Dashboard — serve embedded static files (no auth, localhost only)

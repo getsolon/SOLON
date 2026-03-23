@@ -1,5 +1,5 @@
 import { fetchJSON } from './client'
-import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions } from './types'
+import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions, ProviderConfig, SandboxInfo, SandboxPreset } from './types'
 
 // Local instance API — same-origin calls, no auth headers needed
 // Go's LocalhostOrAuth middleware handles authentication for localhost
@@ -47,6 +47,50 @@ export const localAPI: InstanceAPI = {
 
   catalog: () =>
     fetchJSON<{ models: CatalogModel[] }>('/api/v1/models/catalog').then(r => r.models || []),
+}
+
+// --- Provider API (not part of InstanceAPI interface, standalone functions) ---
+
+export const providerAPI = {
+  list: () =>
+    fetchJSON<{ providers: ProviderConfig[] }>('/api/v1/providers').then(r => r.providers || []),
+
+  add: (name: string, apiKey: string, baseUrl?: string) =>
+    fetchJSON<ProviderConfig>('/api/v1/providers', {
+      method: 'POST',
+      body: JSON.stringify({ name, api_key: apiKey, base_url: baseUrl }),
+    }),
+
+  remove: (name: string) =>
+    fetchJSON<{ status: string }>(`/api/v1/providers/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+}
+
+// --- Sandbox API ---
+
+export const sandboxAPI = {
+  list: () =>
+    fetchJSON<{ sandboxes: SandboxInfo[]; available: boolean }>('/api/v1/sandboxes'),
+
+  create: (name: string, policy: string, env?: Record<string, string>) =>
+    fetchJSON<SandboxInfo>('/api/v1/sandboxes', {
+      method: 'POST',
+      body: JSON.stringify({ name, policy, env }),
+    }),
+
+  get: (id: string) =>
+    fetchJSON<SandboxInfo>(`/api/v1/sandboxes/${id}`),
+
+  start: (id: string) =>
+    fetchJSON<{ status: string }>(`/api/v1/sandboxes/${id}/start`, { method: 'POST' }),
+
+  stop: (id: string) =>
+    fetchJSON<{ status: string }>(`/api/v1/sandboxes/${id}/stop`, { method: 'POST' }),
+
+  remove: (id: string) =>
+    fetchJSON<{ status: string }>(`/api/v1/sandboxes/${id}`, { method: 'DELETE' }),
+
+  presets: () =>
+    fetchJSON<{ presets: SandboxPreset[] }>('/api/v1/sandboxes/presets').then(r => r.presets || []),
 }
 
 export interface PullModelCallbacks {

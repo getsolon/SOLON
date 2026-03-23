@@ -7,7 +7,9 @@ import ThemeToggle from './ThemeToggle'
 const navItems = [
   { to: '/', label: 'Home' },
   { to: '/models', label: 'Models' },
+  { to: '/providers', label: 'Providers' },
   { to: '/keys', label: 'API Keys' },
+  { to: '/sandboxes', label: 'Sandboxes' },
   { to: '/activity', label: 'Activity' },
 ]
 

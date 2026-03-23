@@ -18,6 +18,7 @@ import (
 	"github.com/openclaw/solon/internal/inference/backends"
 	"github.com/openclaw/solon/internal/models"
 	"github.com/openclaw/solon/internal/relay"
+	"github.com/openclaw/solon/internal/sandbox"
 	"github.com/openclaw/solon/internal/storage"
 	"github.com/openclaw/solon/internal/tunnel"
 	"github.com/openclaw/solon/internal/update"
@@ -139,6 +140,20 @@ func serveCmd() *cobra.Command {
 			// Optional: refresh catalog from remote on startup
 			go models.RefreshCatalogFromRemote("https://getsolon.dev/catalog.json")
 
+			// Initialize sandbox manager (optional — requires Docker)
+			var sandboxMgr *sandbox.Manager
+			dockerSocket := "/var/run/docker.sock"
+			sandboxMgr = sandbox.NewManager(dockerSocket, db, port)
+			if sandboxMgr.Available(cmd.Context()) {
+				log.Println("Docker detected — sandbox management enabled")
+				if err := sandboxMgr.EnsureNetwork(cmd.Context()); err != nil {
+					log.Printf("Warning: could not create sandbox network: %v", err)
+				}
+			} else {
+				log.Println("Docker not detected — sandbox management disabled")
+				sandboxMgr = nil
+			}
+
 			gw, err := gateway.New(gateway.Config{
 				Port:       port,
 				Version:    version,
@@ -147,6 +162,7 @@ func serveCmd() *cobra.Command {
 				Tunnel:     t,
 				Guardrails: grCfg,
 				Policies:   policies,
+				Sandboxes:  sandboxMgr,
 			})
 			if err != nil {
 				return fmt.Errorf("creating gateway: %w", err)

@@ -123,6 +123,44 @@ export interface CreateKeyOptions {
   tunnel_access?: boolean
 }
 
+// Provider types
+
+export interface ProviderConfig {
+  id: string
+  name: string
+  base_url: string
+  api_key: string   // Masked (last 4 chars)
+  enabled: boolean
+  created_at: string
+}
+
+// Sandbox types
+
+export interface SandboxInfo {
+  id: string
+  name: string
+  container_id?: string
+  status: string    // "created" | "running" | "stopped" | "failed"
+  policy: string
+  api_key_id?: string
+  config?: SandboxConfig
+  created_at: string
+  started_at?: string
+  stopped_at?: string
+}
+
+export interface SandboxConfig {
+  env?: Record<string, string>
+  image?: string
+  memory?: number
+}
+
+export interface SandboxPreset {
+  name: string
+  description: string
+  allowed_hosts?: string[]
+}
+
 // Download/pull types
 
 export interface DownloadProgress {

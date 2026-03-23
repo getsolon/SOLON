@@ -123,6 +123,21 @@ func (d *DB) migrate() error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`ALTER TABLE requests ADD COLUMN provider TEXT`,
+
+		// V1.3: Sandbox management
+		`CREATE TABLE IF NOT EXISTS sandboxes (
+			id           TEXT PRIMARY KEY,
+			name         TEXT NOT NULL UNIQUE,
+			container_id TEXT,
+			status       TEXT NOT NULL DEFAULT 'created',
+			policy       TEXT NOT NULL DEFAULT 'api-only',
+			api_key_id   TEXT,
+			config       TEXT,
+			created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
+			started_at   DATETIME,
+			stopped_at   DATETIME
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_sandboxes_name ON sandboxes(name)`,
 	}
 
 	for _, m := range migrations {
