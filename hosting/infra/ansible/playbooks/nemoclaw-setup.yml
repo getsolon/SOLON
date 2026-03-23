@@ -1,0 +1,29 @@
+---
+# playbooks/nemoclaw-setup.yml
+# Base NemoClaw/Solon setup playbook
+# Targets: Ubuntu 22.04 / 24.04
+
+- name: Set up NemoClaw base infrastructure
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    solon_version: "latest"
+    solon_port: 8420
+    solon_user: solon
+    solon_group: solon
+    solon_install_dir: /opt/solon
+    solon_config_dir: /etc/solon
+    solon_data_dir: /var/lib/solon
+    solon_api_key: "{{ vault_solon_api_key | default('changeme') }}"
+    solon_tunnel_enabled: false
+    solon_tunnel_token: "{{ vault_solon_tunnel_token | default('') }}"
+    solon_github_repo: "solon-project/solon"
+    nodejs_major_version: 20
+    openclaw_enabled: false
+    openclaw_config: {}
+
+  roles:
+    - docker
+    - nemoclaw

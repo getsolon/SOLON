@@ -1,0 +1,40 @@
+# {{ ansible_managed }}
+# NemoClaw dynamic inventory
+# Render this template with the appropriate variables to generate hosts.yml
+
+all:
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+    ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+  children:
+    nemoclaw_nodes:
+      hosts:
+{% for host in nemoclaw_hosts | default([]) %}
+        {{ host.name }}:
+          ansible_host: {{ host.ip }}
+          ansible_user: {{ host.ssh_user | default('ubuntu') }}
+          ansible_ssh_private_key_file: {{ host.ssh_key_path | default('~/.ssh/id_ed25519') }}
+{% if host.solon_api_key is defined %}
+          solon_api_key: "{{ host.solon_api_key }}"
+{% endif %}
+{% if host.gpu_enabled is defined and host.gpu_enabled %}
+          gpu_enabled: true
+{% endif %}
+{% endfor %}
+
+    gpu_nodes:
+      hosts:
+{% for host in nemoclaw_hosts | default([]) %}
+{% if host.gpu_enabled is defined and host.gpu_enabled %}
+        {{ host.name }}:
+{% endif %}
+{% endfor %}
+
+    cpu_nodes:
+      hosts:
+{% for host in nemoclaw_hosts | default([]) %}
+{% if not (host.gpu_enabled | default(false)) %}
+        {{ host.name }}:
+{% endif %}
+{% endfor %}

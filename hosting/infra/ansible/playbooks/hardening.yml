@@ -1,0 +1,16 @@
+---
+# playbooks/hardening.yml
+# Server hardening playbook for NemoClaw managed hosting
+# Targets: Ubuntu 22.04 / 24.04
+
+- name: Harden NemoClaw servers
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    allowed_ssh_port: 22
+    solon_port: 8420
+
+  roles:
+    - hardening

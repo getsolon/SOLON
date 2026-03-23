@@ -1,0 +1,23 @@
+---
+# playbooks/gpu-setup.yml
+# GPU-specific setup for NemoClaw inference nodes
+# Targets: Ubuntu 22.04 / 24.04 with NVIDIA GPUs
+
+- name: Set up GPU inference infrastructure
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    nvidia_driver_version: "550"
+    cuda_toolkit_version: "12-4"
+    vllm_image: "vllm/vllm-openai:latest"
+    vllm_model: "nvidia/Nemotron-4-340B-Instruct"
+    vllm_gpu_memory_utilization: "0.90"
+    vllm_tensor_parallel_size: 1
+    vllm_port: 8000
+    vllm_max_model_len: 4096
+    solon_inference_url: "http://127.0.0.1:8000/v1"
+
+  roles:
+    - gpu-inference

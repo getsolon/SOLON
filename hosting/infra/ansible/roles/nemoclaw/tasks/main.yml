@@ -1,0 +1,152 @@
+---
+# roles/nemoclaw/tasks/main.yml
+# Install and configure Solon for NemoClaw managed hosting
+
+# --- System user and directories ---
+
+- name: Create solon group
+  ansible.builtin.group:
+    name: "{{ solon_group }}"
+    system: true
+    state: present
+
+- name: Create solon user
+  ansible.builtin.user:
+    name: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    system: true
+    shell: /usr/sbin/nologin
+    home: "{{ solon_data_dir }}"
+    create_home: false
+
+- name: Create Solon directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    mode: "0755"
+  loop:
+    - "{{ solon_install_dir }}"
+    - "{{ solon_install_dir }}/bin"
+    - "{{ solon_config_dir }}"
+    - "{{ solon_data_dir }}"
+    - "{{ solon_data_dir }}/logs"
+
+# --- Node.js ---
+
+- name: Install Node.js prerequisite packages
+  ansible.builtin.apt:
+    name:
+      - ca-certificates
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+- name: Add NodeSource GPG key
+  ansible.builtin.get_url:
+    url: "https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key"
+    dest: /etc/apt/keyrings/nodesource.asc
+    mode: "0644"
+
+- name: Add NodeSource repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/nodesource.asc]
+      https://deb.nodesource.com/node_{{ nodejs_major_version }}.x
+      nodistro main
+    state: present
+    filename: nodesource
+
+- name: Install Node.js
+  ansible.builtin.apt:
+    name: nodejs
+    state: present
+    update_cache: true
+
+# --- Solon binary ---
+
+- name: Check if Solon is already installed
+  ansible.builtin.stat:
+    path: "{{ solon_install_dir }}/bin/solon"
+  register: solon_binary
+
+- name: Get latest Solon release tag from GitHub
+  ansible.builtin.uri:
+    url: "https://api.github.com/repos/{{ solon_github_repo }}/releases/latest"
+    return_content: true
+    headers:
+      Accept: "application/vnd.github.v3+json"
+  register: solon_latest_release
+  when: solon_version == "latest" and not solon_binary.stat.exists
+
+- name: Set Solon download version
+  ansible.builtin.set_fact:
+    solon_download_version: >-
+      {{ solon_version if solon_version != 'latest'
+         else solon_latest_release.json.tag_name }}
+  when: not solon_binary.stat.exists
+
+- name: Download Solon binary
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/{{ solon_github_repo }}/releases/download/{{ solon_download_version }}/solon-linux-{{ ansible_architecture | replace('x86_64', 'amd64') | replace('aarch64', 'arm64') }}
+    dest: "{{ solon_install_dir }}/bin/solon"
+    owner: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    mode: "0755"
+  when: not solon_binary.stat.exists
+  notify: restart solon
+
+# --- Solon configuration ---
+
+- name: Deploy Solon configuration
+  ansible.builtin.template:
+    src: solon-config.yaml.j2
+    dest: "{{ solon_config_dir }}/config.yaml"
+    owner: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    mode: "0640"
+  notify: restart solon
+
+# --- Systemd service ---
+
+- name: Deploy Solon systemd service
+  ansible.builtin.template:
+    src: solon.service.j2
+    dest: /etc/systemd/system/solon.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - reload systemd
+    - restart solon
+
+- name: Enable and start Solon service
+  ansible.builtin.systemd:
+    name: solon
+    enabled: true
+    state: started
+    daemon_reload: true
+
+# --- OpenClaw (optional) ---
+
+- name: Create OpenClaw configuration directory
+  ansible.builtin.file:
+    path: "{{ solon_config_dir }}/openclaw"
+    state: directory
+    owner: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    mode: "0755"
+  when: openclaw_enabled
+
+- name: Deploy OpenClaw configuration
+  ansible.builtin.copy:
+    dest: "{{ solon_config_dir }}/openclaw/config.yaml"
+    content: "{{ openclaw_config | to_nice_yaml }}"
+    owner: "{{ solon_user }}"
+    group: "{{ solon_group }}"
+    mode: "0640"
+  when: openclaw_enabled and openclaw_config | length > 0
+  notify: restart solon

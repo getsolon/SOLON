@@ -1,0 +1,144 @@
+---
+# roles/gpu-inference/tasks/main.yml
+# Install NVIDIA drivers, CUDA toolkit, and set up vLLM for inference
+
+# --- NVIDIA Drivers ---
+
+- name: Install kernel headers (required for NVIDIA driver)
+  ansible.builtin.apt:
+    name:
+      - "linux-headers-{{ ansible_kernel }}"
+      - build-essential
+      - dkms
+    state: present
+    update_cache: true
+
+- name: Add NVIDIA driver PPA
+  ansible.builtin.apt_repository:
+    repo: "ppa:graphics-drivers/ppa"
+    state: present
+
+- name: Install NVIDIA driver
+  ansible.builtin.apt:
+    name: "nvidia-driver-{{ nvidia_driver_version }}"
+    state: present
+    update_cache: true
+  register: nvidia_driver_install
+
+- name: Add NVIDIA CUDA keyring
+  ansible.builtin.get_url:
+    url: >-
+      https://developer.download.nvidia.com/compute/cuda/repos/ubuntu{{ ansible_distribution_version | replace('.', '') }}/{{ ansible_architecture }}/cuda-keyring_1.1-1_all.deb
+    dest: /tmp/cuda-keyring.deb
+    mode: "0644"
+
+- name: Install NVIDIA CUDA keyring
+  ansible.builtin.apt:
+    deb: /tmp/cuda-keyring.deb
+    state: present
+
+- name: Install CUDA toolkit
+  ansible.builtin.apt:
+    name: "cuda-toolkit-{{ cuda_toolkit_version }}"
+    state: present
+    update_cache: true
+
+- name: Add CUDA to system PATH
+  ansible.builtin.copy:
+    dest: /etc/profile.d/cuda.sh
+    content: |
+      export PATH=/usr/local/cuda/bin:$PATH
+      export LD_LIBRARY_PATH=/usr/local/cuda/lib64:$LD_LIBRARY_PATH
+    owner: root
+    group: root
+    mode: "0644"
+
+# --- NVIDIA Container Toolkit ---
+
+- name: Add NVIDIA Container Toolkit GPG key
+  ansible.builtin.get_url:
+    url: https://nvidia.github.io/libnvidia-container/gpgkey
+    dest: /etc/apt/keyrings/nvidia-container-toolkit.asc
+    mode: "0644"
+
+- name: Add NVIDIA Container Toolkit repository
+  ansible.builtin.apt_repository:
+    repo: >-
+      deb [signed-by=/etc/apt/keyrings/nvidia-container-toolkit.asc]
+      https://nvidia.github.io/libnvidia-container/stable/deb/$(ARCH) /
+    state: present
+    filename: nvidia-container-toolkit
+
+- name: Install NVIDIA Container Toolkit
+  ansible.builtin.apt:
+    name: nvidia-container-toolkit
+    state: present
+    update_cache: true
+
+- name: Configure Docker to use NVIDIA runtime
+  ansible.builtin.command: nvidia-ctk runtime configure --runtime=docker
+  changed_when: true
+  notify: restart docker for gpu
+
+# --- vLLM Setup ---
+
+- name: Create vLLM directory
+  ansible.builtin.file:
+    path: /opt/vllm
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy vLLM Docker Compose file
+  ansible.builtin.template:
+    src: vllm-compose.yml.j2
+    dest: /opt/vllm/docker-compose.yml
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart vllm
+
+- name: Create vLLM model cache directory
+  ansible.builtin.file:
+    path: /opt/vllm/model-cache
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Start vLLM service
+  ansible.builtin.command:
+    cmd: docker compose up -d
+    chdir: /opt/vllm
+  changed_when: true
+
+- name: Wait for vLLM to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ vllm_port }}/health"
+    method: GET
+    status_code: 200
+  register: vllm_health
+  retries: 30
+  delay: 10
+  until: vllm_health.status == 200
+  ignore_errors: true
+
+# --- Configure Solon to use local vLLM ---
+
+- name: Update Solon config with local vLLM inference URL
+  ansible.builtin.lineinfile:
+    path: /etc/solon/config.yaml
+    regexp: "^  url:.*"
+    line: "  url: \"http://127.0.0.1:{{ vllm_port }}/v1\""
+    insertafter: "^inference:"
+  notify: restart solon after gpu setup
+  when: solon_config_dir is defined
+
+# --- Reboot if NVIDIA driver was freshly installed ---
+
+- name: Reboot to load NVIDIA driver
+  ansible.builtin.reboot:
+    reboot_timeout: 300
+    msg: "Rebooting to load NVIDIA driver"
+  when: nvidia_driver_install.changed
