@@ -152,145 +152,8 @@ jobs:
           command: deploy
           workingDirectory: install
 
-  cloud-app:
-    needs: test
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Build dashboard
-        run: cd dashboard && npm install && npm run build
-
-      - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dashboard/dist --project-name=solon-cloud
-
-  cloud-api:
-    needs: test
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        run: cd cloud && npm install
-
-      - name: Type check
-        run: cd cloud && npx tsc --noEmit
-
-      - name: Apply D1 migrations
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 migrations apply solon-cloud --remote
-          workingDirectory: cloud
-
-      - name: Deploy Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy
-          workingDirectory: cloud
-          secrets: |
-            JWT_SECRET
-            ENCRYPTION_KEY
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-
-  desktop:
-    needs: test
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.25'
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: dashboard/package.json
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install build dependencies
-        run: brew install cmake libomp
-
-      - name: Cache llama.cpp build
-        uses: actions/cache@v4
-        with:
-          path: third_party/llama-go/build
-          key: llamacpp-macOS-arm64-${{ hashFiles('third_party/llama-go/.git') }}
-
-      - name: Build llama.cpp
-        run: make build-llamacpp
-
-      - name: Build dashboard
-        run: make build-dashboard
-
-      - name: Build Go sidecar
-        run: make build
-
-      - name: Prepare sidecar for Tauri
-        run: |
-          mkdir -p desktop/src-tauri/bin
-          cp bin/solon desktop/src-tauri/bin/solon-aarch64-apple-darwin
-
-      - name: Import signing certificate
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
-          security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" build.keychain
-          rm certificate.p12
-
-      - name: Build desktop app
-        env:
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          TAURI_SIGNING_PRIVATE_KEY: ''
-        working-directory: desktop
-        run: |
-          npm install
-          npx tauri build
-
-      - name: Upload desktop artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: solon-desktop-dmg
-          path: desktop/src-tauri/target/release/bundle/dmg/*.dmg
-
   release:
-    needs: [build, desktop]
+    needs: [build]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -311,12 +174,6 @@ jobs:
             chmod +x "release/$name"
           done
 
-      - name: Prepare desktop DMG
-        run: |
-          if [ -d artifacts/solon-desktop-dmg ]; then
-            cp artifacts/solon-desktop-dmg/*.dmg release/Solon.dmg
-          fi
-
       - name: Generate checksums
         run: |
           cd release/
@@ -331,6 +188,33 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes \
             release/*
+
+  update-homebrew:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update Homebrew formula
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ github.ref_name }}"
+          VERSION="${VERSION#v}"
+
+          # Download checksums
+          gh release download "${{ github.ref_name }}" --pattern "checksums.txt" --dir /tmp
+
+          # Extract SHA for darwin-arm64
+          DARWIN_SHA=$(grep "solon-darwin-arm64" /tmp/checksums.txt | awk '{print $1}')
+          LINUX_AMD64_SHA=$(grep "solon-linux-amd64" /tmp/checksums.txt | awk '{print $1}')
+          LINUX_ARM64_SHA=$(grep "solon-linux-arm64" /tmp/checksums.txt | awk '{print $1}')
+
+          echo "Version: $VERSION"
+          echo "Darwin ARM64 SHA: $DARWIN_SHA"
+          echo "Linux AMD64 SHA: $LINUX_AMD64_SHA"
+          echo "Linux ARM64 SHA: $LINUX_ARM64_SHA"
 
   test-install:
     needs: release

@@ -3,7 +3,7 @@
 # Usage: curl -fsSL https://getsolon.dev | sh
 set -e
 
-REPO="theodorthirtyseven37/SOLON"
+REPO="openclaw/solon"
 INSTALL_DIR="${SOLON_INSTALL_DIR:-/usr/local/bin}"
 
 # Detect OS

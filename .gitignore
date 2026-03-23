@@ -19,5 +19,25 @@ desktop/src-tauri/bin/solon-*
 desktop/src-tauri/target/
 desktop/src-tauri/gen/
 
+# Hosting platform
+hosting/node_modules/
+hosting/.next/
+hosting/.env
+hosting/.env.local
+hosting/infra/terraform/**/.terraform/
+hosting/infra/terraform/**/*.tfstate
+hosting/infra/terraform/**/*.tfstate.backup
+hosting/infra/terraform/**/terraform.tfvars
+!hosting/infra/terraform/environments/personal/terraform.tfvars
+
+# Relay
+relay/node_modules/
+
+# Build cache
+*.tsbuildinfo
+
+# Root node_modules (if any)
+/node_modules/
+
 # OS files
 .DS_Store
