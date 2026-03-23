@@ -161,6 +161,15 @@ export interface SandboxPreset {
   allowed_hosts?: string[]
 }
 
+export interface SandboxStats {
+  cpu_percent: number
+  mem_usage_mb: number
+  mem_limit_mb: number
+  mem_percent: number
+  net_rx_mb: number
+  net_tx_mb: number
+}
+
 // Download/pull types
 
 export interface DownloadProgress {

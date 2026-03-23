@@ -262,6 +262,72 @@ func (d *dockerClient) networkExists(ctx context.Context, name string) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
+// containerStats returns resource usage stats for a container.
+func (d *dockerClient) containerStats(ctx context.Context, id string) (*containerStatsResult, error) {
+	// stream=false returns a single snapshot
+	resp, err := d.do(ctx, "GET", "/containers/"+id+"/stats?stream=false", nil)
+	if err != nil {
+		return nil, fmt.Errorf("getting container stats: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf("getting container stats: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var raw struct {
+		CPUStats struct {
+			CPUUsage struct {
+				TotalUsage uint64 `json:"total_usage"`
+			} `json:"cpu_usage"`
+			SystemCPUUsage uint64 `json:"system_cpu_usage"`
+			OnlineCPUs     int    `json:"online_cpus"`
+		} `json:"cpu_stats"`
+		PreCPUStats struct {
+			CPUUsage struct {
+				TotalUsage uint64 `json:"total_usage"`
+			} `json:"cpu_usage"`
+			SystemCPUUsage uint64 `json:"system_cpu_usage"`
+		} `json:"precpu_stats"`
+		MemoryStats struct {
+			Usage uint64 `json:"usage"`
+			Limit uint64 `json:"limit"`
+		} `json:"memory_stats"`
+		Networks map[string]struct {
+			RxBytes uint64 `json:"rx_bytes"`
+			TxBytes uint64 `json:"tx_bytes"`
+		} `json:"networks"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("decoding container stats: %w", err)
+	}
+
+	// Calculate CPU percentage
+	cpuDelta := float64(raw.CPUStats.CPUUsage.TotalUsage - raw.PreCPUStats.CPUUsage.TotalUsage)
+	sysDelta := float64(raw.CPUStats.SystemCPUUsage - raw.PreCPUStats.SystemCPUUsage)
+	cpuPercent := 0.0
+	if sysDelta > 0 && cpuDelta > 0 {
+		cpuPercent = (cpuDelta / sysDelta) * float64(raw.CPUStats.OnlineCPUs) * 100.0
+	}
+
+	// Sum network I/O across all interfaces
+	var rxBytes, txBytes uint64
+	for _, net := range raw.Networks {
+		rxBytes += net.RxBytes
+		txBytes += net.TxBytes
+	}
+
+	return &containerStatsResult{
+		CPUPercent: cpuPercent,
+		MemUsage:   raw.MemoryStats.Usage,
+		MemLimit:   raw.MemoryStats.Limit,
+		NetRxBytes: rxBytes,
+		NetTxBytes: txBytes,
+	}, nil
+}
+
 // --- Types for Docker API ---
 
 type containerConfig struct {
@@ -273,6 +339,14 @@ type containerState struct {
 	Status   string
 	Running  bool
 	ExitCode int
+}
+
+type containerStatsResult struct {
+	CPUPercent float64
+	MemUsage   uint64
+	MemLimit   uint64
+	NetRxBytes uint64
+	NetTxBytes uint64
 }
 
 type containerListEntry struct {

@@ -1,5 +1,5 @@
 import { fetchJSON } from './client'
-import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions, ProviderConfig, SandboxInfo, SandboxPreset } from './types'
+import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions, ProviderConfig, SandboxInfo, SandboxPreset, SandboxStats } from './types'
 
 // Local instance API — same-origin calls, no auth headers needed
 // Go's LocalhostOrAuth middleware handles authentication for localhost
@@ -91,6 +91,9 @@ export const sandboxAPI = {
 
   presets: () =>
     fetchJSON<{ presets: SandboxPreset[] }>('/api/v1/sandboxes/presets').then(r => r.presets || []),
+
+  stats: (id: string) =>
+    fetchJSON<SandboxStats>(`/api/v1/sandboxes/${id}/stats`),
 }
 
 export interface PullModelCallbacks {

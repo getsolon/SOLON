@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import type { SandboxInfo, SandboxPreset } from '../../api/types'
+import { useState, useEffect, useCallback } from 'react'
+import type { SandboxInfo, SandboxPreset, SandboxStats } from '../../api/types'
 import { sandboxAPI } from '../../api/local'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -23,6 +23,12 @@ export default function Sandboxes() {
   const [showCreate, setShowCreate] = useState(false)
   const [error, setError] = useState('')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [stats, setStats] = useState<Record<string, SandboxStats>>({})
+
+  const refreshStats = useCallback((id: string) => {
+    sandboxAPI.stats(id).then(s => setStats(prev => ({ ...prev, [id]: s }))).catch(() => {})
+  }, [])
 
   const load = () => {
     setLoading(true)
@@ -106,57 +112,110 @@ export default function Sandboxes() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {sandboxes.map(sb => (
-            <div key={sb.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[sb.status] || 'bg-gray-400'}`} />
-                  <div>
-                    <span className="font-medium text-[var(--text)]">{sb.name}</span>
-                    <span className="text-xs text-[var(--text-tertiary)] ml-2">{sb.status}</span>
+          {sandboxes.map(sb => {
+            const isExpanded = expandedId === sb.id
+            const sbStats = stats[sb.id]
+
+            return (
+              <div key={sb.id} className="rounded-xl border border-[var(--border)] bg-[var(--bg-card)] p-4">
+                <div className="flex items-center justify-between">
+                  <div
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => {
+                      if (isExpanded) {
+                        setExpandedId(null)
+                      } else {
+                        setExpandedId(sb.id)
+                        if (sb.status === 'running') refreshStats(sb.id)
+                      }
+                    }}
+                  >
+                    <span className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[sb.status] || 'bg-gray-400'}`} />
+                    <div>
+                      <span className="font-medium text-[var(--text)]">{sb.name}</span>
+                      <span className="text-xs text-[var(--text-tertiary)] ml-2">{sb.status}</span>
+                    </div>
+                    <svg
+                      width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                      className={`text-[var(--text-tertiary)] transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 rounded text-xs bg-[var(--bg-hover)] text-[var(--text-secondary)]">
+                      {POLICY_LABELS[sb.policy] || sb.policy}
+                    </span>
+
+                    {sb.status === 'created' || sb.status === 'stopped' ? (
+                      <button
+                        onClick={() => handleAction(sb.id, 'start')}
+                        disabled={actionLoading === sb.id}
+                        className="px-3 py-1 rounded-lg text-xs font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                      >
+                        Start
+                      </button>
+                    ) : sb.status === 'running' ? (
+                      <button
+                        onClick={() => handleAction(sb.id, 'stop')}
+                        disabled={actionLoading === sb.id}
+                        className="px-3 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
+                      >
+                        Stop
+                      </button>
+                    ) : null}
+
+                    <button
+                      onClick={() => handleAction(sb.id, 'remove')}
+                      disabled={actionLoading === sb.id}
+                      className="px-3 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded text-xs bg-[var(--bg-hover)] text-[var(--text-secondary)]">
-                    {POLICY_LABELS[sb.policy] || sb.policy}
-                  </span>
-
-                  {sb.status === 'created' || sb.status === 'stopped' ? (
-                    <button
-                      onClick={() => handleAction(sb.id, 'start')}
-                      disabled={actionLoading === sb.id}
-                      className="px-3 py-1 rounded-lg text-xs font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors disabled:opacity-50"
-                    >
-                      Start
-                    </button>
-                  ) : sb.status === 'running' ? (
-                    <button
-                      onClick={() => handleAction(sb.id, 'stop')}
-                      disabled={actionLoading === sb.id}
-                      className="px-3 py-1 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors disabled:opacity-50"
-                    >
-                      Stop
-                    </button>
-                  ) : null}
-
-                  <button
-                    onClick={() => handleAction(sb.id, 'remove')}
-                    disabled={actionLoading === sb.id}
-                    className="px-3 py-1 rounded-lg text-xs text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                  >
-                    Remove
-                  </button>
+                <div className="mt-3 flex gap-4 text-xs text-[var(--text-tertiary)]">
+                  <span>Image: {sb.config?.image || 'node:22-slim'}</span>
+                  <span>Created: {new Date(sb.created_at).toLocaleDateString()}</span>
+                  {sb.started_at && <span>Started: {new Date(sb.started_at).toLocaleString()}</span>}
                 </div>
-              </div>
 
-              <div className="mt-3 flex gap-4 text-xs text-[var(--text-tertiary)]">
-                <span>Image: {sb.config?.image || 'node:22-slim'}</span>
-                <span>Created: {new Date(sb.created_at).toLocaleDateString()}</span>
-                {sb.started_at && <span>Started: {new Date(sb.started_at).toLocaleString()}</span>}
+                {/* Monitoring panel */}
+                {isExpanded && sb.status === 'running' && (
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-medium text-[var(--text-secondary)]">Resource Usage</p>
+                      <button
+                        onClick={() => refreshStats(sb.id)}
+                        className="text-xs text-[var(--accent)] hover:underline"
+                      >
+                        Refresh
+                      </button>
+                    </div>
+                    {sbStats ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        <MiniStat label="CPU" value={`${sbStats.cpu_percent.toFixed(1)}%`} />
+                        <MiniStat label="Memory" value={`${sbStats.mem_usage_mb.toFixed(0)} MB`} sub={`${sbStats.mem_percent.toFixed(1)}% of ${(sbStats.mem_limit_mb / 1024).toFixed(1)} GB`} />
+                        <MiniStat label="Net RX" value={`${sbStats.net_rx_mb.toFixed(2)} MB`} />
+                        <MiniStat label="Net TX" value={`${sbStats.net_tx_mb.toFixed(2)} MB`} />
+                      </div>
+                    ) : (
+                      <p className="text-xs text-[var(--text-tertiary)]">Loading stats...</p>
+                    )}
+                  </div>
+                )}
+
+                {isExpanded && sb.status !== 'running' && (
+                  <div className="mt-4 pt-4 border-t border-[var(--border)]">
+                    <p className="text-xs text-[var(--text-tertiary)]">Start the sandbox to see resource usage.</p>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -283,6 +342,16 @@ function CreateSandboxModal({ onClose, onCreated }: { onClose: () => void; onCre
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function MiniStat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="rounded-lg bg-[var(--bg)] border border-[var(--border)] p-2.5">
+      <p className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)]">{label}</p>
+      <p className="text-sm font-semibold text-[var(--text)] mt-0.5">{value}</p>
+      {sub && <p className="text-[10px] text-[var(--text-tertiary)]">{sub}</p>}
     </div>
   )
 }

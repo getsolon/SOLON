@@ -168,6 +168,22 @@ func (g *Gateway) handleSandboxLogs(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (g *Gateway) handleSandboxStats(w http.ResponseWriter, r *http.Request) {
+	if g.sandboxes == nil {
+		writeError(w, http.StatusServiceUnavailable, "sandbox management not available")
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	stats, err := g.sandboxes.Stats(r.Context(), id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, stats)
+}
+
 func (g *Gateway) handleListPresets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"presets": sandbox.ListPresets()})
 }

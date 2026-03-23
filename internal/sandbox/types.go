@@ -56,5 +56,15 @@ const (
 	LabelPolicy    = "solon.sandbox.policy"
 )
 
+// SandboxStats holds resource usage for a sandbox.
+type SandboxStats struct {
+	CPUPercent float64 `json:"cpu_percent"`
+	MemUsageMB float64 `json:"mem_usage_mb"`
+	MemLimitMB float64 `json:"mem_limit_mb"`
+	MemPercent float64 `json:"mem_percent"`
+	NetRxMB    float64 `json:"net_rx_mb"`
+	NetTxMB    float64 `json:"net_tx_mb"`
+}
+
 // Docker network name for sandboxes.
 const NetworkName = "solon-bridge"

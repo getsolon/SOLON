@@ -165,6 +165,7 @@ func (g *Gateway) setupRoutes() {
 		r.Post("/api/v1/sandboxes/{id}/stop", g.handleStopSandbox)
 		r.Delete("/api/v1/sandboxes/{id}", g.handleRemoveSandbox)
 		r.Get("/api/v1/sandboxes/{id}/logs", g.handleSandboxLogs)
+		r.Get("/api/v1/sandboxes/{id}/stats", g.handleSandboxStats)
 	})
 
 	// Dashboard — serve embedded static files (no auth, localhost only)

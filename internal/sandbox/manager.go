@@ -316,6 +316,37 @@ func (m *Manager) Logs(ctx context.Context, id string, tail int) (io.ReadCloser,
 	return m.docker.containerLogs(ctx, sb.ContainerID, tail, false)
 }
 
+// Stats returns resource usage for a sandbox.
+func (m *Manager) Stats(ctx context.Context, id string) (*SandboxStats, error) {
+	sb, err := m.store.GetSandbox(id)
+	if err != nil {
+		return nil, fmt.Errorf("sandbox not found: %w", err)
+	}
+	if sb.ContainerID == "" {
+		return nil, fmt.Errorf("sandbox %s has no container", id)
+	}
+
+	raw, err := m.docker.containerStats(ctx, sb.ContainerID)
+	if err != nil {
+		return nil, fmt.Errorf("getting stats: %w", err)
+	}
+
+	const mb = 1024.0 * 1024.0
+	memPercent := 0.0
+	if raw.MemLimit > 0 {
+		memPercent = float64(raw.MemUsage) / float64(raw.MemLimit) * 100
+	}
+
+	return &SandboxStats{
+		CPUPercent: raw.CPUPercent,
+		MemUsageMB: float64(raw.MemUsage) / mb,
+		MemLimitMB: float64(raw.MemLimit) / mb,
+		MemPercent: memPercent,
+		NetRxMB:    float64(raw.NetRxBytes) / mb,
+		NetTxMB:    float64(raw.NetTxBytes) / mb,
+	}, nil
+}
+
 func dbSandboxToSandbox(db *storage.SandboxRecord) *Sandbox {
 	sb := &Sandbox{
 		ID:          db.ID,
