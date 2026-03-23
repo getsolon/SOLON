@@ -132,6 +132,48 @@ List available models (OpenAI-compatible format).
 
 ---
 
+## Anthropic Pass-Through Proxy
+
+Transparent reverse proxy for the Anthropic Messages API. Accepts Anthropic-native request format, swaps the API key with the stored Anthropic provider key, and forwards to the upstream. Response is streamed back unchanged.
+
+Requires an `anthropic` provider to be configured via `POST /api/v1/providers`.
+
+### POST /v1/messages
+
+Auth: `Authorization: Bearer sol_sk_live_...` or `x-api-key: sol_sk_live_...`
+
+```bash
+curl http://localhost:8420/v1/messages \
+  -H "x-api-key: sol_sk_live_YOUR_KEY" \
+  -H "anthropic-version: 2023-06-01" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "claude-sonnet-4-20250514",
+    "max_tokens": 1024,
+    "messages": [{"role": "user", "content": "Hello"}]
+  }'
+```
+
+**Response:** Anthropic-native format (passed through from upstream).
+
+```json
+{
+  "id": "msg_01...",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-4-20250514",
+  "content": [{"type": "text", "text": "Hello! How can I help you?"}],
+  "stop_reason": "end_turn",
+  "usage": {"input_tokens": 10, "output_tokens": 12}
+}
+```
+
+Streaming: set `"stream": true` in the request body. Response uses Anthropic SSE format.
+
+The `anthropic-beta` header is forwarded if present.
+
+---
+
 ## API Key Management
 
 ### POST /api/v1/keys
