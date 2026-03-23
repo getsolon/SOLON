@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -103,6 +104,14 @@ func (g *Gateway) setupRoutes() {
 		r.Post("/v1/completions", g.handleCompletions)
 		r.Post("/v1/embeddings", g.handleEmbeddings)
 		r.Get("/v1/models", g.handleListModels)
+	})
+
+	// Anthropic-native pass-through proxy (accepts x-api-key auth)
+	r.Group(func(r chi.Router) {
+		r.Use(NormalizeAnthropicAuth)
+		r.Use(g.LocalhostOrAuth)
+		r.Use(g.RateLimit)
+		r.Post("/v1/messages", g.handleAnthropicMessages)
 	})
 
 	// Management API (localhost-only, no API key needed for dashboard access)
@@ -440,6 +449,102 @@ func (g *Gateway) handleListModels(w http.ResponseWriter, r *http.Request) {
 		"object": "list",
 		"data":   data,
 	})
+}
+
+// --- Anthropic pass-through proxy ---
+
+// anthropicProxyClient is a shared HTTP client for proxying to Anthropic.
+var anthropicProxyClient = &http.Client{Timeout: 10 * time.Minute}
+
+func (g *Gateway) handleAnthropicMessages(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, int64(g.guardrails.Gate.MaxBodyBytes)))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "request body too large or unreadable")
+		return
+	}
+
+	// Get Anthropic provider config
+	provider, err := g.store.GetProvider("anthropic")
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "anthropic provider not configured")
+		return
+	}
+	apiKey, err := g.store.GetProviderKey("anthropic")
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "anthropic provider not configured or disabled")
+		return
+	}
+
+	// Build upstream request
+	upstreamURL := provider.BaseURL + "/v1/messages"
+	upReq, err := http.NewRequestWithContext(r.Context(), "POST", upstreamURL, bytes.NewReader(body))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create upstream request")
+		return
+	}
+
+	upReq.Header.Set("Content-Type", "application/json")
+	upReq.Header.Set("x-api-key", apiKey)
+	if v := r.Header.Get("anthropic-version"); v != "" {
+		upReq.Header.Set("anthropic-version", v)
+	} else {
+		upReq.Header.Set("anthropic-version", "2023-06-01")
+	}
+	if beta := r.Header.Get("anthropic-beta"); beta != "" {
+		upReq.Header.Set("anthropic-beta", beta)
+	}
+
+	start := time.Now()
+
+	resp, err := anthropicProxyClient.Do(upReq)
+	if err != nil {
+		log.Printf("anthropic proxy error: %v", err)
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("upstream error: %v", err))
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Copy response headers
+	for k, vs := range resp.Header {
+		for _, v := range vs {
+			w.Header().Add(k, v)
+		}
+	}
+	w.WriteHeader(resp.StatusCode)
+
+	// Stream response body — flush for SSE support
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		if u, ok2 := w.(interface{ Unwrap() http.ResponseWriter }); ok2 {
+			flusher, ok = u.Unwrap().(http.Flusher)
+		}
+	}
+
+	if ok {
+		buf := make([]byte, 4096)
+		for {
+			n, readErr := resp.Body.Read(buf)
+			if n > 0 {
+				_, _ = w.Write(buf[:n])
+				flusher.Flush()
+			}
+			if readErr != nil {
+				break
+			}
+		}
+	} else {
+		_, _ = io.Copy(w, resp.Body)
+	}
+
+	// Log request (best-effort, after response completes)
+	if keyInfo, ok := r.Context().Value(keyContextKey).(*KeyInfo); ok {
+		var parsed struct {
+			Model string `json:"model"`
+		}
+		_ = json.Unmarshal(body, &parsed)
+		_ = g.store.LogRequest(keyInfo.ID, r.Method, r.URL.Path, parsed.Model,
+			0, 0, int(time.Since(start).Milliseconds()), resp.StatusCode, "anthropic")
+	}
 }
 
 // --- Management handlers ---

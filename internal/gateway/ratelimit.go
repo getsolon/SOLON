@@ -103,8 +103,9 @@ func (g *Gateway) RateLimit(next http.Handler) http.Handler {
 
 // KeyInfo holds information about an authenticated API key.
 type KeyInfo struct {
-	ID        string
-	Name      string
-	Scope     string
-	RateLimit int // requests per minute
+	ID            string
+	Name          string
+	Scope         string
+	RateLimit     int // requests per minute
+	AllowedModels []string
 }

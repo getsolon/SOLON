@@ -16,16 +16,8 @@ type ModelSource struct {
 	File string `json:"file"` // "Q4_K_M" (substring filter for GGUF filename)
 }
 
-// DefaultModels contains built-in model name mappings.
-var DefaultModels = map[string]ModelSource{
-	"llama3.2:8b":      {Repo: "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF", File: "Q4_K_M"},
-	"llama3.2:3b":      {Repo: "bartowski/Llama-3.2-3B-Instruct-GGUF", File: "Q4_K_M"},
-	"mistral:7b":       {Repo: "mistralai/Mistral-7B-Instruct-v0.3-GGUF", File: "Q4_K_M"},
-	"phi4:14b":         {Repo: "bartowski/phi-4-GGUF", File: "Q4_K_M"},
-	"gemma3:9b":        {Repo: "bartowski/gemma-2-9b-it-GGUF", File: "Q4_K_M"},
-	"qwen2.5:7b":       {Repo: "Qwen/Qwen2.5-7B-Instruct-GGUF", File: "Q4_K_M"},
-	"nomic-embed-text": {Repo: "nomic-ai/nomic-embed-text-v1.5-GGUF", File: "Q8_0"},
-}
+// DefaultModels contains built-in model name mappings, loaded from catalog.json.
+var DefaultModels = DefaultModelsFromCatalog()
 
 // Manifest represents a downloaded model's metadata.
 type Manifest struct {
