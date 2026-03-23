@@ -10,6 +10,10 @@ export interface Env {
   ADMIN_GITHUB_ID: string
   ADMIN_EMAIL: string
   DASHBOARD_URL: string
+  STRIPE_SECRET_KEY: string
+  STRIPE_WEBHOOK_SECRET: string
+  PROVISIONER_URL: string
+  PROVISIONER_SECRET: string
 }
 
 export interface UserRow {
@@ -74,6 +78,24 @@ export interface TeamMemberRow {
   invited_by: string | null
   joined_at: string
   last_active: string | null
+}
+
+export interface ManagedInstanceRow {
+  id: string
+  user_id: string
+  name: string
+  tier: string
+  status: string
+  hetzner_server_id: string | null
+  ipv4: string | null
+  region: string
+  solon_api_key_enc: string | null
+  dashboard_url: string | null
+  stripe_subscription_id: string | null
+  provisioning_job_id: string | null
+  created_at: string
+  ready_at: string | null
+  deleted_at: string | null
 }
 
 export interface JWTPayload {

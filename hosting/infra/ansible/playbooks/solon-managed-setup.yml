@@ -1,0 +1,45 @@
+---
+# playbooks/solon-managed-setup.yml
+# Full Solon managed hosting setup — non-interactive, no NemoClaw dependency
+# Targets: Ubuntu 22.04 / 24.04
+
+- name: Set up Solon managed hosting instance
+  hosts: all
+  become: true
+  gather_facts: true
+
+  vars:
+    solon_version: "latest"
+    solon_port: 8420
+    solon_user: solon
+    solon_group: solon
+    solon_install_dir: /opt/solon
+    solon_config_dir: /etc/solon
+    solon_data_dir: /var/lib/solon
+    solon_github_repo: "solon-project/solon"
+    solon_tunnel_enabled: false
+    solon_tunnel_token: ""
+
+  pre_tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - ca-certificates
+          - ufw
+          - fail2ban
+        state: present
+
+  roles:
+    - role: ../roles/hardening
+      when: ansible_virtualization_type != "docker"
+
+    - role: ../roles/docker
+      when: ansible_virtualization_type != "docker"
+
+    - role: ../roles/solon-managed

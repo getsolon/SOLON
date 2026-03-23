@@ -12,6 +12,7 @@ import tokenRoutes from './routes/tokens'
 import teamRoutes from './routes/team'
 import billingRoutes from './routes/billing'
 import adminRoutes from './routes/admin'
+import webhookRoutes from './routes/webhooks'
 
 const app = new Hono<{ Bindings: Env }>()
 
@@ -30,8 +31,9 @@ app.onError((err, c) => {
   return c.json({ error: 'Internal server error' }, 500)
 })
 
-// Public routes
+// Public routes (no auth)
 app.route('/api/auth', authRoutes)
+app.route('/api/webhooks', webhookRoutes)
 
 // Authed routes
 const authed = new Hono<{ Bindings: Env; Variables: { userId: string; userPlan: string; userRole: string } }>()

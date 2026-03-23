@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+# Systemd service for Solon (NemoClaw managed hosting)
+
+[Unit]
+Description=Solon - NemoClaw Hosting Agent
+Documentation=https://github.com/{{ solon_github_repo }}
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User={{ solon_user }}
+Group={{ solon_group }}
+
+ExecStart={{ solon_install_dir }}/bin/solon --config {{ solon_config_dir }}/config.yaml
+WorkingDirectory={{ solon_data_dir }}
+
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths={{ solon_data_dir }} {{ solon_config_dir }}
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+# Environment
+Environment=NODE_ENV=production
+Environment=SOLON_CONFIG={{ solon_config_dir }}/config.yaml
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=solon
+
+[Install]
+WantedBy=multi-user.target

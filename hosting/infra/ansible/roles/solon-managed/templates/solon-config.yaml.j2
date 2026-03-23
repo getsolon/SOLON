@@ -1,0 +1,36 @@
+# {{ ansible_managed }}
+# Solon configuration for NemoClaw managed hosting
+
+server:
+  port: {{ solon_port }}
+  host: "0.0.0.0"
+
+api:
+  key: "{{ solon_api_key }}"
+
+data:
+  dir: "{{ solon_data_dir }}"
+
+logging:
+  level: "info"
+  dir: "{{ solon_data_dir }}/logs"
+
+{% if solon_tunnel_enabled %}
+tunnel:
+  enabled: true
+  token: "{{ solon_tunnel_token }}"
+{% endif %}
+
+{% if openclaw_enabled %}
+openclaw:
+  enabled: true
+  config_path: "{{ solon_config_dir }}/openclaw/config.yaml"
+{% if solon_inference_url is defined %}
+  inference_url: "{{ solon_inference_url }}"
+{% endif %}
+{% endif %}
+
+{% if solon_inference_url is defined and not openclaw_enabled %}
+inference:
+  url: "{{ solon_inference_url }}"
+{% endif %}
