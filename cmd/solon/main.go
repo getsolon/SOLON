@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -594,12 +595,50 @@ func providersCmd() *cobra.Command {
 	addCmd := &cobra.Command{
 		Use:   "add [name]",
 		Short: "Add an external API provider (e.g., anthropic, openai)",
-		Args:  cobra.ExactArgs(1),
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			name := args[0]
+			reader := bufio.NewReader(os.Stdin)
+			name := ""
 
+			// Interactive wizard if no args/flags
+			if len(args) == 0 {
+				fmt.Println("Add an external API provider")
+				fmt.Println()
+				fmt.Println("Supported providers:")
+				fmt.Println("  1) anthropic")
+				fmt.Println("  2) openai")
+				fmt.Println("  3) other (custom)")
+				fmt.Println()
+				fmt.Print("Select provider [1]: ")
+				choice, _ := reader.ReadString('\n')
+				choice = strings.TrimSpace(choice)
+				switch choice {
+				case "", "1", "anthropic":
+					name = "anthropic"
+				case "2", "openai":
+					name = "openai"
+				case "3", "other":
+					fmt.Print("Provider name: ")
+					name, _ = reader.ReadString('\n')
+					name = strings.TrimSpace(name)
+					if name == "" {
+						return fmt.Errorf("provider name is required")
+					}
+				default:
+					name = strings.TrimSpace(choice)
+				}
+			} else {
+				name = args[0]
+			}
+
+			// Interactive API key prompt if not passed via flag
 			if apiKey == "" {
-				return fmt.Errorf("--api-key is required")
+				fmt.Printf("Paste your %s API key: ", name)
+				apiKey, _ = reader.ReadString('\n')
+				apiKey = strings.TrimSpace(apiKey)
+				if apiKey == "" {
+					return fmt.Errorf("API key is required")
+				}
 			}
 
 			// Auto-fill base URL from well-known defaults
@@ -607,7 +646,12 @@ func providersCmd() *cobra.Command {
 				if url, ok := storage.WellKnownProviders[name]; ok {
 					baseURL = url
 				} else {
-					return fmt.Errorf("--base-url is required for unknown provider %q", name)
+					fmt.Print("Base URL: ")
+					baseURL, _ = reader.ReadString('\n')
+					baseURL = strings.TrimSpace(baseURL)
+					if baseURL == "" {
+						return fmt.Errorf("base URL is required for unknown provider %q", name)
+					}
 				}
 			}
 
@@ -622,6 +666,7 @@ func providersCmd() *cobra.Command {
 				return fmt.Errorf("adding provider: %w", err)
 			}
 
+			fmt.Println()
 			fmt.Printf("Provider added: %s\n", provider.Name)
 			fmt.Printf("  Base URL: %s\n", provider.BaseURL)
 			fmt.Printf("  API Key:  %s\n", provider.APIKey)
@@ -640,7 +685,6 @@ func providersCmd() *cobra.Command {
 	}
 	addCmd.Flags().StringVar(&apiKey, "api-key", "", "API key for the provider")
 	addCmd.Flags().StringVar(&baseURL, "base-url", "", "Base URL (auto-detected for anthropic/openai)")
-	_ = addCmd.MarkFlagRequired("api-key")
 
 	cmd.AddCommand(
 		addCmd,

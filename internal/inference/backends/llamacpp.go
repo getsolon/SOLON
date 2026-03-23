@@ -1,3 +1,5 @@
+//go:build llamacpp
+
 package backends
 
 import (

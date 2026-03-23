@@ -1,6 +1,12 @@
 package backends
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+// ErrBackendUnavailable is returned when a backend is not available on this build.
+var ErrBackendUnavailable = errors.New("backend not available (built without CGO)")
 
 // Backend is the interface all inference backends must implement.
 type Backend interface {
