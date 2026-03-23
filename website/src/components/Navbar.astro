@@ -2,9 +2,8 @@
 const { current = '' } = Astro.props
 
 const links = [
-  { href: '/docs', label: 'Docs' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/blog', label: 'Blog' },
+  { href: '/docs', label: 'Docs' },
 ]
 ---
 
@@ -43,18 +42,6 @@ const links = [
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
         </svg>
       </button>`} />
-      <a
-        href="https://app.getsolon.dev/login"
-        class="text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-      >
-        Sign In
-      </a>
-      <a
-        href="https://app.getsolon.dev/login"
-        class="text-sm font-medium bg-brand hover:bg-brand/90 text-white rounded-lg px-4 py-2 transition-colors"
-      >
-        Create Account
-      </a>
     </div>
   </div>
 </nav>

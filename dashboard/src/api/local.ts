@@ -1,5 +1,5 @@
 import { fetchJSON } from './client'
-import type { InstanceAPI, HealthStatus, ModelInfo, APIKey, RequestLogEntry, UsageStats, TunnelStatus, DownloadProgress } from './types'
+import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions } from './types'
 
 // Local instance API — same-origin calls, no auth headers needed
 // Go's LocalhostOrAuth middleware handles authentication for localhost
@@ -7,16 +7,21 @@ import type { InstanceAPI, HealthStatus, ModelInfo, APIKey, RequestLogEntry, Usa
 export const localAPI: InstanceAPI = {
   health: () => fetchJSON<HealthStatus>('/api/v1/health'),
 
+  system: () => fetchJSON<SystemInfo>('/api/v1/system'),
+
   models: () =>
     fetchJSON<{ models: ModelInfo[] }>('/api/v1/models').then(r => r.models || []),
+
+  deleteModel: (name: string) =>
+    fetchJSON<{ status: string }>(`/api/v1/models/${encodeURIComponent(name)}`, { method: 'DELETE' }),
 
   keys: {
     list: () =>
       fetchJSON<{ keys: APIKey[] }>('/api/v1/keys').then(r => r.keys || []),
-    create: (name: string) =>
+    create: (opts: CreateKeyOptions) =>
       fetchJSON<{ key: string; name: string; id: string }>('/api/v1/keys', {
         method: 'POST',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(opts),
       }),
     revoke: (id: string) =>
       fetchJSON<{ status: string }>(`/api/v1/keys/${id}`, { method: 'DELETE' }),
@@ -26,6 +31,8 @@ export const localAPI: InstanceAPI = {
     requests: () =>
       fetchJSON<{ requests: RequestLogEntry[] }>('/api/v1/analytics/requests').then(r => r.requests || []),
     usage: () => fetchJSON<UsageStats>('/api/v1/analytics/usage'),
+    usageByKey: () =>
+      fetchJSON<{ usage: Record<string, KeyUsage> }>('/api/v1/analytics/usage/keys').then(r => r.usage || {}),
   },
 
   tunnel: {
@@ -33,6 +40,13 @@ export const localAPI: InstanceAPI = {
     enable: () => fetchJSON<TunnelStatus>('/api/v1/tunnel/enable', { method: 'POST' }),
     disable: () => fetchJSON<{ status: string }>('/api/v1/tunnel/disable', { method: 'POST' }),
   },
+
+  remote: {
+    status: () => fetchJSON<RemoteStatus>('/api/v1/remote/status'),
+  },
+
+  catalog: () =>
+    fetchJSON<{ models: CatalogModel[] }>('/api/v1/models/catalog').then(r => r.models || []),
 }
 
 export interface PullModelCallbacks {
@@ -52,7 +66,7 @@ export function pullModel(name: string, callbacks: PullModelCallbacks): AbortCon
       const res = await fetch('/api/v1/models/pull', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, stream: true }),
         signal: controller.signal,
       })
 

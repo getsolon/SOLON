@@ -1,33 +1,23 @@
 import { useEffect } from 'react'
 import { Outlet } from 'react-router-dom'
-import Sidebar from '../components/Sidebar'
-import { useInstancesStore } from '../store/instances'
-import { useModeStore } from '../store/mode'
+import NavBar from '../components/NavBar'
+import { InstanceProvider } from '../contexts/InstanceContext'
+import { localAPI } from '../api/local'
 import { useServerStore } from '../store/server'
 
 export default function AppLayout() {
-  const load = useInstancesStore(s => s.load)
-  const mode = useModeStore(s => s.mode)
   const fetchServer = useServerStore(s => s.fetch)
 
   useEffect(() => {
-    if (mode !== 'local') {
-      load()
-    }
-  }, [load, mode])
-
-  useEffect(() => {
-    if (mode !== 'cloud') {
-      fetchServer()
-    }
-  }, [fetchServer, mode])
+    fetchServer()
+  }, [fetchServer])
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <Sidebar />
-      <div className="lg:pl-60">
+      <NavBar />
+      <InstanceProvider api={localAPI} instanceName="Solon">
         <Outlet />
-      </div>
+      </InstanceProvider>
     </div>
   )
 }

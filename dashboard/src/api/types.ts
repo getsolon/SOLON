@@ -1,36 +1,12 @@
-// Cloud API types
-
-export interface User {
-  id: string
-  name: string
-  email: string
-  plan: 'free' | 'pro' | 'team' | 'enterprise'
-  avatar_url: string | null
-  role: 'admin' | 'user' | 'waitlisted'
-  provider: 'github' | 'google' | null
-  created_at: string
-}
-
-export interface AdminUser {
-  id: string
-  name: string
-  email: string
-  avatar_url: string | null
-  role: 'admin' | 'user' | 'waitlisted'
-  provider: 'github' | 'google' | null
-  created_at: string
-}
-
-export interface AuthResponse {
-  token: string
-  user: User
-}
-
-// Solon instance types (shared between local + remote)
+// Solon instance types
 
 export interface HealthStatus {
   status: string
   version: string
+}
+
+export interface SystemInfo {
+  total_memory_mb: number
 }
 
 export interface ModelInfo {
@@ -51,6 +27,9 @@ export interface APIKey {
   rate_limit: number
   created_at: string
   last_used?: string
+  tunnel_access: boolean
+  expires_at?: string
+  allowed_models?: string[]
 }
 
 export interface RequestLogEntry {
@@ -76,77 +55,72 @@ export interface UsageStats {
   most_used_model: string
 }
 
+export interface KeyUsage {
+  request_count: number
+  total_tokens: number
+}
+
 export interface TunnelStatus {
   enabled: boolean
   url?: string
   provider?: string
+  persistent?: boolean
 }
 
-// InstanceAPI — common interface for local + remote instance clients
+export interface RemoteStatus {
+  enabled: boolean
+  url?: string
+  instance_id?: string
+  provider?: string
+}
+
+export interface CatalogModel {
+  name: string
+  description: string
+  creator: string
+  sizes: string[]
+  category: 'chat' | 'code' | 'embedding'
+  capabilities: string[]
+  context: number
+  vram: Record<string, number>
+  sources: Record<string, { repo: string; file: string }>
+}
+
+// InstanceAPI — common interface for local instance client
 
 export interface InstanceAPI {
   health: () => Promise<HealthStatus>
+  system: () => Promise<SystemInfo>
   models: () => Promise<ModelInfo[]>
+  deleteModel: (name: string) => Promise<{ status: string }>
   keys: {
     list: () => Promise<APIKey[]>
-    create: (name: string) => Promise<{ key: string; name: string; id: string }>
+    create: (opts: CreateKeyOptions) => Promise<{ key: string; name: string; id: string }>
     revoke: (id: string) => Promise<{ status: string }>
   }
   analytics: {
     requests: () => Promise<RequestLogEntry[]>
     usage: () => Promise<UsageStats>
+    usageByKey: () => Promise<Record<string, KeyUsage>>
   }
   tunnel: {
     status: () => Promise<TunnelStatus>
     enable: () => Promise<TunnelStatus>
     disable: () => Promise<{ status: string }>
   }
-}
-
-// Cloud-specific types
-
-export interface Instance {
-  id: string
-  name: string
-  url: string
-  api_key: string
-  status: 'online' | 'offline' | 'unknown'
-  version?: string
-  models_count?: number
-  added_at: string
-}
-
-export interface BillingInfo {
-  plan: 'free' | 'pro' | 'team' | 'enterprise'
-  status: 'active' | 'past_due' | 'canceled'
-  current_period_end: string
-  usage: {
-    instances: { used: number; limit: number }
-    requests: { used: number; limit: number }
-    team_members: { used: number; limit: number }
+  remote: {
+    status: () => Promise<RemoteStatus>
   }
-  payment_method?: {
-    type: string
-    last4: string
-    exp: string
-  }
+  catalog: () => Promise<CatalogModel[]>
 }
 
-export interface TeamMember {
-  id: string
+export interface CreateKeyOptions {
   name: string
-  email: string
-  role: 'owner' | 'admin' | 'member'
-  joined_at: string
-  last_active?: string
-}
-
-export interface CloudAPIToken {
-  id: string
-  name: string
-  prefix: string
-  created_at: string
-  last_used?: string
+  scope?: string
+  rate_limit?: number
+  ttl_seconds?: number
+  allowed_models?: string[]
+  tunnel_access?: boolean
 }
 
 // Download/pull types
