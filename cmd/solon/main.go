@@ -38,6 +38,7 @@ func main() {
 		modelsCmd(),
 		keysCmd(),
 		providersCmd(),
+		sandboxesCmd(),
 		tunnelCmd(),
 		statusCmd(),
 		versionCmd(),
@@ -748,6 +749,143 @@ func providersCmd() *cobra.Command {
 				}
 
 				fmt.Printf("Provider %s removed.\n", args[0])
+				return nil
+			},
+		},
+	)
+
+	return cmd
+}
+
+func sandboxesCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "sandboxes",
+		Short: "Manage OpenClaw sandboxes",
+	}
+
+	var policy string
+
+	createCmd := &cobra.Command{
+		Use:   "create [name]",
+		Short: "Create a new sandbox",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			db, err := storage.Open("")
+			if err != nil {
+				return fmt.Errorf("opening database: %w", err)
+			}
+			defer func() { _ = db.Close() }()
+
+			mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+			if !mgr.Available(cmd.Context()) {
+				return fmt.Errorf("Docker is not running — sandboxes require Docker")
+			}
+
+			sb, err := mgr.Create(cmd.Context(), sandbox.CreateRequest{
+				Name:   args[0],
+				Policy: policy,
+			})
+			if err != nil {
+				return err
+			}
+
+			fmt.Printf("Sandbox created: %s\n", sb.Name)
+			fmt.Printf("  ID:     %s\n", sb.ID)
+			fmt.Printf("  Policy: %s\n", sb.Policy)
+			fmt.Printf("  Status: %s\n", sb.Status)
+			fmt.Println()
+			fmt.Println("Start it with:")
+			fmt.Printf("  solon sandboxes start %s\n", sb.ID)
+			return nil
+		},
+	}
+	createCmd.Flags().StringVar(&policy, "policy", "api-only", "Network policy: full, api-only, inference-only, custom")
+
+	cmd.AddCommand(
+		createCmd,
+		&cobra.Command{
+			Use:   "list",
+			Short: "List all sandboxes",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				sandboxes, err := mgr.List(cmd.Context())
+				if err != nil {
+					return err
+				}
+
+				if len(sandboxes) == 0 {
+					fmt.Println("No sandboxes. Run 'solon sandboxes create <name>' to create one.")
+					return nil
+				}
+
+				fmt.Printf("%-20s %-10s %-15s %-20s\n", "NAME", "STATUS", "POLICY", "CREATED")
+				for _, sb := range sandboxes {
+					fmt.Printf("%-20s %-10s %-15s %-20s\n",
+						sb.Name, sb.Status, sb.Policy, sb.CreatedAt.Format("2006-01-02 15:04"))
+				}
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "start [id]",
+			Short: "Start a sandbox",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				if err := mgr.Start(cmd.Context(), args[0]); err != nil {
+					return err
+				}
+				fmt.Println("Sandbox started.")
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "stop [id]",
+			Short: "Stop a sandbox",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				if err := mgr.Stop(cmd.Context(), args[0]); err != nil {
+					return err
+				}
+				fmt.Println("Sandbox stopped.")
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "remove [id]",
+			Short: "Remove a sandbox and revoke its API key",
+			Args:  cobra.ExactArgs(1),
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				if err := mgr.Remove(cmd.Context(), args[0]); err != nil {
+					return err
+				}
+				fmt.Println("Sandbox removed.")
 				return nil
 			},
 		},

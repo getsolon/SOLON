@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useInstanceContext } from '../contexts/InstanceContext'
 import { useServerStore } from '../store/server'
 import Card from '../components/Card'
+import Setup from './instance/Setup'
+import { providerAPI, sandboxAPI } from '../api/local'
 import type { UsageStats, ModelInfo } from '../api/types'
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -27,17 +29,25 @@ export default function Home() {
   const [stats, setStats] = useState<UsageStats | null>(null)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [loading, setLoading] = useState(true)
+  const [showSetup, setShowSetup] = useState(false)
+  const [hasProviders, setHasProviders] = useState<boolean | null>(null)
 
   useEffect(() => {
     Promise.all([
       api.analytics.usage().then(setStats).catch(() => {}),
       api.models().then(setModels).catch(() => {}),
+      providerAPI.list().then(p => setHasProviders(p.length > 0)).catch(() => setHasProviders(false)),
     ]).finally(() => setLoading(false))
   }, [api])
 
   const isOnline = status === 'online'
   const hasActivity = stats && stats.total_requests > 0
   const hasModels = models.length > 0
+
+  // Show guided setup wizard when no providers and no models (fresh install)
+  if (!loading && hasProviders === false && !hasModels && !hasActivity) {
+    return <Setup onComplete={() => { setShowSetup(false); setHasProviders(true) }} />
+  }
 
   if (loading) {
     return (
