@@ -16,10 +16,11 @@ import (
 
 // Manager manages sandbox lifecycle via Docker.
 type Manager struct {
-	docker     *dockerClient
-	store      *storage.DB
-	solonPort  int
+	docker      *dockerClient
+	store       *storage.DB
+	solonPort   int
 	bridgeReady bool
+	gatewayIP   string // solon-bridge gateway IP (host-accessible from containers)
 }
 
 // NewManager creates a sandbox manager. socketPath is the Docker unix socket
@@ -32,13 +33,18 @@ func NewManager(socketPath string, store *storage.DB, solonPort int) *Manager {
 	}
 }
 
-// EnsureNetwork creates the solon-bridge Docker network if it doesn't exist.
+// EnsureNetwork creates the solon-bridge Docker network if it doesn't exist
+// and caches the gateway IP for container environment variables.
 func (m *Manager) EnsureNetwork(ctx context.Context) error {
 	if m.bridgeReady {
 		return nil
 	}
 	if err := m.docker.networkCreate(ctx, NetworkName); err != nil {
 		return fmt.Errorf("ensuring Docker network: %w", err)
+	}
+	// Detect the gateway IP for this network
+	if gw := m.docker.networkGateway(ctx, NetworkName); gw != "" {
+		m.gatewayIP = gw
 	}
 	m.bridgeReady = true
 	return nil
@@ -93,10 +99,15 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 	sandboxID := uuid.New().String()
 	containerName := "openclaw-sandbox-" + req.Name
 
-	// Build environment variables
+	// Build environment variables — use the bridge gateway IP so containers
+	// can reach Solon on the host (host.docker.internal is unreliable on Linux)
+	solonHost := m.gatewayIP
+	if solonHost == "" {
+		solonHost = "host.docker.internal"
+	}
 	env := []string{
 		fmt.Sprintf("SOLON_API_KEY=%s", key.Raw),
-		fmt.Sprintf("SOLON_ENDPOINT=http://host.docker.internal:%d", m.solonPort),
+		fmt.Sprintf("SOLON_ENDPOINT=http://%s:%d", solonHost, m.solonPort),
 		"NODE_ENV=production",
 	}
 	for k, v := range req.Env {

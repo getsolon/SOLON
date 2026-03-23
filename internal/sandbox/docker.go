@@ -224,6 +224,34 @@ func (d *dockerClient) networkCreate(ctx context.Context, name string) error {
 	return nil
 }
 
+// networkGateway returns the gateway IP for a Docker network.
+func (d *dockerClient) networkGateway(ctx context.Context, name string) string {
+	resp, err := d.do(ctx, "GET", "/networks/"+name, nil)
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var result struct {
+		IPAM struct {
+			Config []struct {
+				Gateway string `json:"Gateway"`
+			} `json:"Config"`
+		} `json:"IPAM"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return ""
+	}
+	if len(result.IPAM.Config) > 0 {
+		return result.IPAM.Config[0].Gateway
+	}
+	return ""
+}
+
 // networkExists checks if a Docker network exists.
 func (d *dockerClient) networkExists(ctx context.Context, name string) bool {
 	resp, err := d.do(ctx, "GET", "/networks/"+name, nil)

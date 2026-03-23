@@ -142,6 +142,14 @@
 
 # --- Docker setup for OpenClaw sandboxes ---
 
+- name: Allow Docker containers to reach Solon
+  community.general.ufw:
+    rule: allow
+    from_ip: 172.16.0.0/12
+    to_port: "{{ solon_port }}"
+    proto: tcp
+    comment: "Solon from Docker sandboxes"
+
 - name: Create solon-bridge Docker network
   ansible.builtin.command:
     cmd: docker network create solon-bridge
