@@ -94,7 +94,8 @@ export default function Setup({ onComplete }: SetupProps) {
     setLoading(true)
     setError('')
     try {
-      const sb = await sandboxAPI.create(sandboxName.trim(), sandboxPolicy)
+      const policyToTier: Record<string, number> = { 'inference-only': 1, 'api-only': 2, 'full': 3 }
+      const sb = await sandboxAPI.create(sandboxName.trim(), policyToTier[sandboxPolicy] || 2)
       await sandboxAPI.start(sb.id)
       setCreatedSandboxId(sb.id)
       setStep('done')
