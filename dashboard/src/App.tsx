@@ -4,6 +4,7 @@ import { useTheme } from './hooks/useTheme'
 import AppLayout from './layouts/AppLayout'
 
 import Home from './pages/Home'
+import Chat from './pages/instance/Chat'
 import Models from './pages/instance/Models'
 import Keys from './pages/instance/Keys'
 import Providers from './pages/instance/Providers'
@@ -18,6 +19,7 @@ export default function App() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/models" element={<Models />} />
         <Route path="/keys" element={<Keys />} />
         <Route path="/providers" element={<Providers />} />

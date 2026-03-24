@@ -172,6 +172,14 @@ func (g *Gateway) setupRoutes() {
 		r.Get("/api/v1/openclaw/status", g.handleOpenClawStatus)
 	})
 
+	// OpenClaw WebSocket proxy (separate group for query param auth support)
+	r.Group(func(r chi.Router) {
+		r.Use(WSAuthFromQueryParam)
+		r.Use(g.LocalhostOrAuth)
+		r.Use(g.RequireAdminScope)
+		r.Get("/api/v1/openclaw/ws", g.handleOpenClawWS)
+	})
+
 	// Dashboard — serve embedded static files (no auth, localhost only)
 	r.Handle("/*", dashboard.Handler())
 }

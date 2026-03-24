@@ -224,6 +224,37 @@ func (d *dockerClient) networkCreate(ctx context.Context, name string) error {
 	return nil
 }
 
+// containerInspectNetwork returns the IP address of a container on a specific Docker network.
+func (d *dockerClient) containerInspectNetwork(ctx context.Context, id, network string) (string, error) {
+	resp, err := d.do(ctx, "GET", "/containers/"+id+"/json", nil)
+	if err != nil {
+		return "", fmt.Errorf("inspecting container %s: %w", id, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("inspecting container: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var result struct {
+		NetworkSettings struct {
+			Networks map[string]struct {
+				IPAddress string `json:"IPAddress"`
+			} `json:"Networks"`
+		} `json:"NetworkSettings"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("decoding container inspect: %w", err)
+	}
+
+	net, ok := result.NetworkSettings.Networks[network]
+	if !ok || net.IPAddress == "" {
+		return "", fmt.Errorf("container %s not connected to network %s", id, network)
+	}
+	return net.IPAddress, nil
+}
+
 // networkGateway returns the gateway IP for a Docker network.
 func (d *dockerClient) networkGateway(ctx context.Context, name string) string {
 	resp, err := d.do(ctx, "GET", "/networks/"+name, nil)

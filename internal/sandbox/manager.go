@@ -513,6 +513,27 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 	return status, nil
 }
 
+// OpenClawContainerIP returns the IP address of the running OpenClaw gateway container
+// on the solon-bridge network. Returns empty string and error if not found.
+func (m *Manager) OpenClawContainerIP(ctx context.Context) (string, error) {
+	containers, err := m.docker.containerList(ctx, LabelManaged+"=true")
+	if err != nil {
+		return "", fmt.Errorf("listing containers: %w", err)
+	}
+
+	for _, c := range containers {
+		if c.Labels[LabelPolicy] == "openclaw-gateway" && c.State == "running" {
+			ip, err := m.docker.containerInspectNetwork(ctx, c.ID, NetworkName)
+			if err != nil {
+				return "", err
+			}
+			return ip, nil
+		}
+	}
+
+	return "", fmt.Errorf("no running OpenClaw gateway container found")
+}
+
 // Stats returns resource usage for a sandbox.
 func (m *Manager) Stats(ctx context.Context, id string) (*SandboxStats, error) {
 	sb, err := m.store.GetSandbox(id)

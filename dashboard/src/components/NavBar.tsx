@@ -6,6 +6,7 @@ import ThemeToggle from './ThemeToggle'
 
 const navItems = [
   { to: '/', label: 'Home' },
+  { to: '/chat', label: 'Chat' },
   { to: '/models', label: 'Models' },
   { to: '/providers', label: 'Providers' },
   { to: '/keys', label: 'API Keys' },
