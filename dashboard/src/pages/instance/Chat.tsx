@@ -102,9 +102,6 @@ export default function Chat() {
           },
           caps: ['tool_events'],
           scopes: ['operator.admin'],
-          auth: {
-            token: 'solon-openclaw-token',
-          },
         },
       }
       ws.send(JSON.stringify(connectFrame))

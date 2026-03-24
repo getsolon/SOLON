@@ -82,11 +82,7 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithTimeout(r.Context(), wsProxyTimeout)
 	defer cancel()
 
-	upstreamConn, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
-		HTTPHeader: http.Header{
-			"Authorization": []string{"Bearer " + openclawGatewayToken},
-		},
-	})
+	upstreamConn, _, err := websocket.Dial(ctx, upstreamURL, nil)
 	if err != nil {
 		log.Printf("[ws-proxy] upstream dial error: %v", err)
 		browserConn.Close(websocket.StatusBadGateway, "failed to connect to OpenClaw gateway")
