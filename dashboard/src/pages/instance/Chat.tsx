@@ -75,14 +75,34 @@ export default function Chat() {
     setMode(modelList.length > 0 ? 'sse' : 'disconnected')
   }
 
+  let wsReqCounter = 0
+
   function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/openclaw/ws`)
     wsRef.current = ws
+    wsReqCounter = 0
 
     ws.onopen = () => {
-      setMode('ws')
-      setError('')
+      // Send OpenClaw connect handshake
+      const connectFrame = {
+        type: 'req',
+        id: `req_${++wsReqCounter}`,
+        method: 'connect',
+        params: {
+          minProtocol: 1,
+          maxProtocol: 1,
+          client: {
+            id: 'webchat-ui',
+            displayName: 'Solon Chat',
+            version: '1.0.0',
+            platform: 'web',
+            mode: 'webchat',
+          },
+          scopes: ['read', 'write'],
+        },
+      }
+      ws.send(JSON.stringify(connectFrame))
     }
 
     ws.onmessage = (event) => {
@@ -91,7 +111,6 @@ export default function Chat() {
 
     ws.onclose = () => {
       wsRef.current = null
-      // Fall back to SSE mode instead of disconnected
       fallbackToSSE()
     }
 
@@ -102,28 +121,34 @@ export default function Chat() {
   }
 
   function handleWSMessage(data: string) {
-    // OpenClaw sends JSON messages — try to parse and extract content
     try {
-      const msg = JSON.parse(data)
-      // Adapt based on OpenClaw's actual protocol
-      if (msg.content || msg.text || msg.message) {
-        const content = msg.content || msg.text || msg.message
-        setMessages(prev => {
-          // If last message is a streaming assistant message, append
-          const last = prev[prev.length - 1]
-          if (last && last.role === 'assistant' && last.isStreaming) {
-            return [...prev.slice(0, -1), { ...last, content: last.content + content }]
-          }
-          return [...prev, {
-            id: crypto.randomUUID(),
-            role: 'assistant',
-            content,
-            timestamp: Date.now(),
-          }]
-        })
+      const frame = JSON.parse(data)
+
+      // Handle connect response
+      if (frame.type === 'res' && frame.ok) {
+        // Check if this is the connect response (first response)
+        if (mode !== 'ws') {
+          setMode('ws')
+          setError('')
+          // Load chat history
+          sendWSRequest('chat.history', { limit: 50 })
+        }
+        return
+      }
+
+      // Handle connect error
+      if (frame.type === 'res' && !frame.ok) {
+        console.warn('[ws] error response:', frame.error)
+        return
+      }
+
+      // Handle events from OpenClaw (streaming agent output)
+      if (frame.type === 'event') {
+        handleOpenClawEvent(frame.event, frame.payload)
+        return
       }
     } catch {
-      // Raw text message
+      // Non-JSON message — display as-is
       setMessages(prev => [...prev, {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -131,6 +156,63 @@ export default function Chat() {
         timestamp: Date.now(),
       }])
     }
+  }
+
+  function handleOpenClawEvent(event: string, payload: unknown) {
+    const p = payload as Record<string, unknown> | undefined
+
+    if (event === 'chat.message' || event === 'sessions.message') {
+      const role = (p?.role as string) || 'assistant'
+      const content = (p?.content as string) || (p?.text as string) || ''
+      if (role === 'assistant' && content) {
+        setMessages(prev => [...prev, {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content,
+          timestamp: Date.now(),
+        }])
+      }
+    } else if (event === 'chat.delta' || event === 'sessions.delta') {
+      const delta = (p?.delta as string) || (p?.content as string) || ''
+      if (delta) {
+        setMessages(prev => {
+          const last = prev[prev.length - 1]
+          if (last && last.role === 'assistant' && last.isStreaming) {
+            return [...prev.slice(0, -1), { ...last, content: last.content + delta }]
+          }
+          return [...prev, {
+            id: crypto.randomUUID(),
+            role: 'assistant',
+            content: delta,
+            timestamp: Date.now(),
+            isStreaming: true,
+          }]
+        })
+      }
+    } else if (event === 'chat.done' || event === 'sessions.done' || event === 'agent.done') {
+      // Mark streaming as complete
+      setMessages(prev => prev.map(m => m.isStreaming ? { ...m, isStreaming: false } : m))
+    } else if (event === 'agent.tool_use' || event === 'tool.start') {
+      const tool = (p?.tool as string) || (p?.name as string) || 'tool'
+      setMessages(prev => {
+        const last = prev[prev.length - 1]
+        if (last && last.role === 'assistant' && last.isStreaming) {
+          return [...prev.slice(0, -1), { ...last, content: last.content + `\n[Using ${tool}...]\n` }]
+        }
+        return prev
+      })
+    }
+  }
+
+  function sendWSRequest(method: string, params?: unknown) {
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return
+    const frame = {
+      type: 'req',
+      id: `req_${++wsReqCounter}`,
+      method,
+      params,
+    }
+    wsRef.current.send(JSON.stringify(frame))
   }
 
   async function handleSend() {
@@ -149,8 +231,20 @@ export default function Chat() {
     setMessages(prev => [...prev, userMsg])
 
     if (mode === 'ws' && wsRef.current?.readyState === WebSocket.OPEN) {
-      // Send via WebSocket to OpenClaw
-      wsRef.current.send(JSON.stringify({ type: 'message', content: text }))
+      // Send via OpenClaw protocol
+      // Add streaming placeholder
+      setMessages(prev => [...prev, {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        isStreaming: true,
+      }])
+      sendWSRequest('chat.send', {
+        sessionKey: 'main',
+        message: text,
+        idempotencyKey: crypto.randomUUID(),
+      })
     } else {
       // Send via SSE to Solon's inference API
       await sendViaSSE(text)
