@@ -101,6 +101,7 @@ export default function Chat() {
             instanceId: crypto.randomUUID(),
           },
           caps: ['tool_events'],
+          scopes: ['operator.read', 'operator.write', 'operator.admin'],
           auth: {
             token: 'solon-openclaw-token',
           },
