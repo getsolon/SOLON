@@ -84,21 +84,23 @@ export default function Chat() {
     wsReqCounter = 0
 
     ws.onopen = () => {
-      // Send OpenClaw connect handshake (must be the first frame)
+      // Send OpenClaw connect handshake (must be the first frame, protocol v3)
       const connectFrame = {
         type: 'req',
         id: `req_${++wsReqCounter}`,
         method: 'connect',
         params: {
-          minProtocol: 1,
-          maxProtocol: 1,
+          minProtocol: 3,
+          maxProtocol: 3,
           client: {
             id: 'webchat-ui',
             displayName: 'Solon Chat',
             version: '2026.3.24',
             platform: 'web',
-            mode: 'webchat',
+            mode: 'ui',
+            instanceId: crypto.randomUUID(),
           },
+          caps: ['tool_events'],
           auth: {
             token: 'solon-openclaw-token',
           },
