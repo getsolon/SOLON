@@ -197,11 +197,18 @@ func (d *dockerClient) containerList(ctx context.Context, labelFilter string) ([
 	return entries, nil
 }
 
-// networkCreate creates a Docker network.
+// networkCreate creates a Docker bridge network.
 func (d *dockerClient) networkCreate(ctx context.Context, name string) error {
+	return d.networkCreateWithOpts(ctx, name, false)
+}
+
+// networkCreateWithOpts creates a Docker bridge network with options.
+// If internal is true, the network blocks all outbound internet access.
+func (d *dockerClient) networkCreateWithOpts(ctx context.Context, name string, internal bool) error {
 	body := map[string]any{
-		"Name":   name,
-		"Driver": "bridge",
+		"Name":     name,
+		"Driver":   "bridge",
+		"Internal": internal,
 	}
 	resp, err := d.do(ctx, "POST", "/networks/create", body)
 	if err != nil {

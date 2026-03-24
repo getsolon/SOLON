@@ -1,5 +1,5 @@
 import { fetchJSON } from './client'
-import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions, ProviderConfig, SandboxInfo, SandboxPreset, SandboxStats } from './types'
+import type { InstanceAPI, HealthStatus, SystemInfo, ModelInfo, APIKey, RequestLogEntry, UsageStats, KeyUsage, TunnelStatus, RemoteStatus, CatalogModel, DownloadProgress, CreateKeyOptions, ProviderConfig, SandboxInfo, SandboxPreset, SandboxStats, SandboxTier } from './types'
 
 // Local instance API — same-origin calls, no auth headers needed
 // Go's LocalhostOrAuth middleware handles authentication for localhost
@@ -71,10 +71,10 @@ export const sandboxAPI = {
   list: () =>
     fetchJSON<{ sandboxes: SandboxInfo[]; available: boolean }>('/api/v1/sandboxes'),
 
-  create: (name: string, policy: string, env?: Record<string, string>) =>
+  create: (name: string, tier: number, env?: Record<string, string>) =>
     fetchJSON<SandboxInfo>('/api/v1/sandboxes', {
       method: 'POST',
-      body: JSON.stringify({ name, policy, env }),
+      body: JSON.stringify({ name, tier, env }),
     }),
 
   get: (id: string) =>
@@ -91,6 +91,9 @@ export const sandboxAPI = {
 
   presets: () =>
     fetchJSON<{ presets: SandboxPreset[] }>('/api/v1/sandboxes/presets').then(r => r.presets || []),
+
+  tiers: () =>
+    fetchJSON<{ tiers: SandboxTier[] }>('/api/v1/sandboxes/tiers').then(r => r.tiers || []),
 
   stats: (id: string) =>
     fetchJSON<SandboxStats>(`/api/v1/sandboxes/${id}/stats`),

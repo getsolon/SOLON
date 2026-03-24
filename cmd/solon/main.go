@@ -910,6 +910,7 @@ func sandboxesCmd() *cobra.Command {
 	}
 
 	var policy string
+	var tier int
 
 	createCmd := &cobra.Command{
 		Use:   "create [name]",
@@ -927,16 +928,28 @@ func sandboxesCmd() *cobra.Command {
 				return fmt.Errorf("Docker is not running — sandboxes require Docker")
 			}
 
-			sb, err := mgr.Create(cmd.Context(), sandbox.CreateRequest{
-				Name:   args[0],
-				Policy: policy,
-			})
+			req := sandbox.CreateRequest{
+				Name: args[0],
+				Tier: tier,
+			}
+			// If tier not set but policy was, use policy for backward compat
+			if tier == 0 {
+				req.Policy = policy
+			}
+
+			sb, err := mgr.Create(cmd.Context(), req)
 			if err != nil {
 				return err
 			}
 
+			tierName := "Standard"
+			if tc, ok := sandbox.TierConfigs[sb.Tier]; ok {
+				tierName = tc.Name
+			}
+
 			fmt.Printf("Sandbox created: %s\n", sb.Name)
 			fmt.Printf("  ID:     %s\n", sb.ID)
+			fmt.Printf("  Tier:   %d (%s)\n", sb.Tier, tierName)
 			fmt.Printf("  Policy: %s\n", sb.Policy)
 			fmt.Printf("  Status: %s\n", sb.Status)
 			fmt.Println()
@@ -945,7 +958,8 @@ func sandboxesCmd() *cobra.Command {
 			return nil
 		},
 	}
-	createCmd.Flags().StringVar(&policy, "policy", "api-only", "Network policy: full, api-only, inference-only, custom")
+	createCmd.Flags().IntVarP(&tier, "tier", "t", 0, "Security tier: 1=locked, 2=standard, 3=advanced, 4=maximum (default 2)")
+	createCmd.Flags().StringVar(&policy, "policy", "api-only", "Network policy (deprecated, use --tier instead)")
 
 	cmd.AddCommand(
 		createCmd,
@@ -970,10 +984,14 @@ func sandboxesCmd() *cobra.Command {
 					return nil
 				}
 
-				fmt.Printf("%-20s %-10s %-15s %-20s\n", "NAME", "STATUS", "POLICY", "CREATED")
+				fmt.Printf("%-20s %-10s %-6s %-15s %-20s\n", "NAME", "STATUS", "TIER", "POLICY", "CREATED")
 				for _, sb := range sandboxes {
-					fmt.Printf("%-20s %-10s %-15s %-20s\n",
-						sb.Name, sb.Status, sb.Policy, sb.CreatedAt.Format("2006-01-02 15:04"))
+					tierLabel := fmt.Sprintf("%d", sb.Tier)
+					if tc, ok := sandbox.TierConfigs[sb.Tier]; ok {
+						tierLabel = fmt.Sprintf("%d-%s", sb.Tier, tc.Name)
+					}
+					fmt.Printf("%-20s %-10s %-6s %-15s %-20s\n",
+						sb.Name, sb.Status, tierLabel, sb.Policy, sb.CreatedAt.Format("2006-01-02 15:04"))
 				}
 				return nil
 			},

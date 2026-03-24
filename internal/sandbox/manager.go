@@ -50,6 +50,100 @@ func (m *Manager) EnsureNetwork(ctx context.Context) error {
 	return nil
 }
 
+// EnsureTierNetworks creates the tier-specific Docker networks if they don't exist.
+// solon-tier1 is internal (no outbound), solon-tier2 is a regular bridge.
+func (m *Manager) EnsureTierNetworks(ctx context.Context) error {
+	// Tier 1: internal network — kernel-level outbound block
+	if err := m.docker.networkCreateWithOpts(ctx, NetworkTier1, true); err != nil {
+		return fmt.Errorf("creating tier-1 network: %w", err)
+	}
+	// Tier 2-3: regular bridge with outbound access
+	if err := m.docker.networkCreate(ctx, NetworkTier2); err != nil {
+		return fmt.Errorf("creating tier-2 network: %w", err)
+	}
+	return nil
+}
+
+// EnsureSandboxImage builds the Playwright-ready sandbox base image if it doesn't exist.
+// The image is built from node:22-slim with Chromium and Playwright pre-installed.
+func (m *Manager) EnsureSandboxImage(ctx context.Context) error {
+	// Check if image already exists
+	resp, _ := m.docker.do(ctx, "GET", "/images/solon%2Fsandbox:latest/json", nil)
+	if resp != nil {
+		_ = resp.Body.Close()
+		if resp.StatusCode == 200 {
+			return nil
+		}
+	}
+
+	log.Println("[sandbox] Building sandbox image with Chromium + Playwright (this takes ~60s)...")
+
+	// Create temp container from node:22-slim
+	tmpID, err := m.docker.containerCreate(ctx, containerConfig{
+		Name: "solon-sandbox-build-tmp",
+		Body: map[string]any{
+			"Image": DefaultImage,
+			"Cmd":   []string{"sleep", "infinity"},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("creating build container: %w", err)
+	}
+
+	cleanup := func() {
+		_ = m.docker.containerStop(ctx, tmpID, 2)
+		_ = m.docker.containerRemove(ctx, tmpID)
+	}
+
+	if err := m.docker.containerStart(ctx, tmpID); err != nil {
+		cleanup()
+		return fmt.Errorf("starting build container: %w", err)
+	}
+
+	// Install Chromium and system dependencies
+	installCmd := []string{"sh", "-c",
+		"apt-get update && apt-get install -y --no-install-recommends " +
+			"chromium fonts-liberation libgbm1 libnss3 libxss1 libasound2 " +
+			"ca-certificates curl && " +
+			"rm -rf /var/lib/apt/lists/*",
+	}
+	if _, err := m.docker.containerExec(ctx, tmpID, installCmd, nil); err != nil {
+		cleanup()
+		return fmt.Errorf("installing chromium dependencies: %w", err)
+	}
+
+	// Install Playwright and its bundled Chromium
+	_, err = m.docker.containerExec(ctx, tmpID,
+		[]string{"npm", "install", "-g", "playwright"},
+		nil,
+	)
+	if err != nil {
+		cleanup()
+		return fmt.Errorf("installing playwright: %w", err)
+	}
+
+	// Set Chromium path for Playwright (use system chromium)
+	_, _ = m.docker.containerExec(ctx, tmpID,
+		[]string{"sh", "-c", "echo 'export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium' >> /etc/profile.d/playwright.sh"},
+		nil,
+	)
+
+	// Commit as image
+	commitResp, err := m.docker.do(ctx, "POST",
+		"/commit?container="+tmpID+"&repo=solon/sandbox&tag=latest&pause=true",
+		nil,
+	)
+	if err != nil {
+		cleanup()
+		return fmt.Errorf("committing sandbox image: %w", err)
+	}
+	_ = commitResp.Body.Close()
+
+	cleanup()
+	log.Println("[sandbox] Image built: solon/sandbox:latest")
+	return nil
+}
+
 // Available returns true if Docker is accessible.
 func (m *Manager) Available(ctx context.Context) bool {
 	resp, err := m.docker.do(ctx, "GET", "/_ping", nil)
@@ -71,15 +165,38 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 	if len(req.Name) < 2 || len(req.Name) > 63 || !validName.MatchString(req.Name) {
 		return nil, fmt.Errorf("sandbox name must be 2-63 lowercase chars, numbers, hyphens (no leading/trailing hyphen)")
 	}
-	if req.Policy == "" {
+	// Resolve tier: explicit tier takes precedence, then map from policy
+	tier := req.Tier
+	if tier > 0 {
+		if !ValidTier(tier) {
+			return nil, fmt.Errorf("invalid tier %d: must be 1-4", tier)
+		}
+	} else if req.Policy != "" {
+		if !ValidPolicy(req.Policy) {
+			return nil, fmt.Errorf("invalid policy %q: must be one of full, api-only, inference-only, custom", req.Policy)
+		}
+		tier = PolicyToTier(req.Policy)
+	} else {
 		req.Policy = "api-only"
-	}
-	if !ValidPolicy(req.Policy) {
-		return nil, fmt.Errorf("invalid policy %q: must be one of full, api-only, inference-only, custom", req.Policy)
+		tier = Tier2Standard
 	}
 
+	// Ensure tier-specific networks exist
 	if err := m.EnsureNetwork(ctx); err != nil {
 		return nil, err
+	}
+	if err := m.EnsureTierNetworks(ctx); err != nil {
+		return nil, err
+	}
+
+	// Resolve tier config
+	tierCfg := TierConfigs[tier]
+
+	// Build the Playwright-ready image for Tier 2+
+	if tier >= Tier2Standard {
+		if err := m.EnsureSandboxImage(ctx); err != nil {
+			return nil, fmt.Errorf("preparing sandbox image: %w", err)
+		}
 	}
 
 	// Create a dedicated API key for this sandbox
@@ -93,7 +210,7 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 
 	image := req.Image
 	if image == "" {
-		image = DefaultImage
+		image = tierCfg.Image
 	}
 
 	sandboxID := uuid.New().String()
@@ -114,6 +231,24 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	// Build host config from tier
+	hostConfig := map[string]any{
+		"NetworkMode": tierCfg.Network,
+		"CapDrop":     []string{"ALL"},
+		"CapAdd":      tierCfg.CapAdd,
+		"SecurityOpt": []string{"no-new-privileges"},
+		"ExtraHosts":  []string{"host.docker.internal:host-gateway"},
+	}
+
+	if tierCfg.MemoryMB > 0 {
+		hostConfig["Memory"] = tierCfg.MemoryMB * 1024 * 1024
+	}
+
+	if tierCfg.Persistent {
+		volumeName := fmt.Sprintf("solon-sandbox-%s", req.Name)
+		hostConfig["Binds"] = []string{volumeName + ":/data"}
+	}
+
 	// Create container
 	cfg := containerConfig{
 		Name: containerName,
@@ -125,22 +260,15 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 				LabelSandboxID: sandboxID,
 				LabelPolicy:    req.Policy,
 			},
-			"Cmd":          []string{"sleep", "infinity"}, // Keep alive; OpenClaw started separately
+			"Cmd":          []string{"sleep", "infinity"},
 			"AttachStdout": true,
 			"AttachStderr": true,
-			"HostConfig": map[string]any{
-				"NetworkMode": NetworkName,
-				"CapDrop":     []string{"ALL"},
-				"CapAdd":      []string{"NET_BIND_SERVICE"},
-				"SecurityOpt": []string{"no-new-privileges"},
-				"ExtraHosts":  []string{fmt.Sprintf("host.docker.internal:host-gateway")},
-			},
+			"HostConfig":   hostConfig,
 		},
 	}
 
 	containerID, err := m.docker.containerCreate(ctx, cfg)
 	if err != nil {
-		// Clean up the API key on failure
 		_ = m.store.RevokeKey(key.ID)
 		return nil, fmt.Errorf("creating Docker container: %w", err)
 	}
@@ -150,6 +278,7 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 	sandboxCfg := &Config{
 		Env:   req.Env,
 		Image: image,
+		Tier:  tier,
 	}
 	cfgBytes, err := json.Marshal(sandboxCfg)
 	if err == nil {
@@ -158,7 +287,7 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 	}
 
 	// Save to database
-	if err := m.store.CreateSandbox(sandboxID, req.Name, containerID, req.Policy, key.ID, configJSON); err != nil {
+	if err := m.store.CreateSandbox(sandboxID, req.Name, containerID, req.Policy, tier, key.ID, configJSON); err != nil {
 		_ = m.docker.containerRemove(ctx, containerID)
 		_ = m.store.RevokeKey(key.ID)
 		return nil, fmt.Errorf("saving sandbox to database: %w", err)
@@ -171,6 +300,7 @@ func (m *Manager) Create(ctx context.Context, req CreateRequest) (*Sandbox, erro
 		ContainerID: containerID,
 		Status:      StatusCreated,
 		Policy:      req.Policy,
+		Tier:        tier,
 		APIKeyID:    key.ID,
 		Config:      sandboxCfg,
 		CreatedAt:   now,
@@ -358,11 +488,16 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 		}
 	}
 
-	// Step 1: Build the OpenClaw image if it doesn't exist
-	// Create a temporary container, install OpenClaw, commit as image
+	// Step 1: Build the OpenClaw image if it doesn't exist.
+	// Based on solon/sandbox:latest (Playwright-ready) with OpenClaw installed.
 	log.Println("[openclaw] Preparing OpenClaw image...")
 
-	// Check if our image already exists
+	// Ensure the base sandbox image exists first (Chromium + Playwright)
+	if err := m.EnsureSandboxImage(ctx); err != nil {
+		log.Printf("[openclaw] Warning: sandbox image build failed, falling back to %s: %v", DefaultImage, err)
+	}
+
+	// Check if OpenClaw image already exists
 	imgResp, _ := m.docker.do(ctx, "GET", "/images/"+imageTag+"/json", nil)
 	needsBuild := true
 	if imgResp != nil {
@@ -376,11 +511,21 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 	if needsBuild {
 		log.Println("[openclaw] Installing OpenClaw into image (this takes ~30s)...")
 
+		// Use sandbox image (Playwright-ready) as base if available, else fall back
+		baseImage := SandboxImage
+		checkResp, _ := m.docker.do(ctx, "GET", "/images/solon%2Fsandbox:latest/json", nil)
+		if checkResp != nil {
+			_ = checkResp.Body.Close()
+			if checkResp.StatusCode != 200 {
+				baseImage = DefaultImage
+			}
+		}
+
 		// Create a temp container to install OpenClaw
 		tmpID, err := m.docker.containerCreate(ctx, containerConfig{
 			Name: "openclaw-build-tmp",
 			Body: map[string]any{
-				"Image": DefaultImage,
+				"Image": baseImage,
 				"Cmd":   []string{"sleep", "infinity"},
 			},
 		})
@@ -401,9 +546,9 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 		}
 
 		// Write OpenClaw config
-		configJSON := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
+		openclawCfg := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
 		_, _ = m.docker.containerExec(ctx, tmpID,
-			[]string{"sh", "-c", "mkdir -p /root/.openclaw && printf '%s' '" + configJSON + "' > /root/.openclaw/openclaw.json"},
+			[]string{"sh", "-c", "mkdir -p /root/.openclaw && printf '%s' '" + openclawCfg + "' > /root/.openclaw/openclaw.json"},
 			nil,
 		)
 
@@ -445,7 +590,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 	}
 	if sandboxID == "" {
 		sandboxID = uuid.New().String()
-		_ = m.store.CreateSandbox(sandboxID, sandboxName, "", "full", "", nil)
+		_ = m.store.CreateSandbox(sandboxID, sandboxName, "", "full", Tier4Maximum, "", nil)
 	}
 	status.SandboxID = sandboxID
 
@@ -572,6 +717,7 @@ func dbSandboxToSandbox(db *storage.SandboxRecord) *Sandbox {
 		ContainerID: db.ContainerID,
 		Status:      db.Status,
 		Policy:      db.Policy,
+		Tier:        db.Tier,
 		APIKeyID:    db.APIKeyID,
 		CreatedAt:   db.CreatedAt,
 		StartedAt:   db.StartedAt,

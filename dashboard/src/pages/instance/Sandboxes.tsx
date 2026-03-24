@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import type { SandboxInfo, SandboxPreset, SandboxStats } from '../../api/types'
+import type { SandboxInfo, SandboxStats, SandboxTier } from '../../api/types'
 import { sandboxAPI } from '../../api/local'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -9,11 +9,18 @@ const STATUS_COLORS: Record<string, string> = {
   failed: 'bg-red-400',
 }
 
-const POLICY_LABELS: Record<string, string> = {
-  full: 'Full Access',
-  'api-only': 'API Only',
-  'inference-only': 'Inference Only',
-  custom: 'Custom',
+const TIER_LABELS: Record<number, string> = {
+  1: 'Locked',
+  2: 'Standard',
+  3: 'Advanced',
+  4: 'Maximum',
+}
+
+const TIER_COLORS: Record<number, string> = {
+  1: 'bg-gray-500/10 text-gray-400',
+  2: 'bg-blue-500/10 text-blue-400',
+  3: 'bg-purple-500/10 text-purple-400',
+  4: 'bg-red-500/10 text-red-400',
 }
 
 export default function Sandboxes() {
@@ -145,8 +152,8 @@ export default function Sandboxes() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-xs bg-[var(--bg-hover)] text-[var(--text-secondary)]">
-                      {POLICY_LABELS[sb.policy] || sb.policy}
+                    <span className={`px-2 py-0.5 rounded text-xs ${TIER_COLORS[sb.tier] || 'bg-[var(--bg-hover)] text-[var(--text-secondary)]'}`}>
+                      Tier {sb.tier} — {TIER_LABELS[sb.tier] || 'Standard'}
                     </span>
 
                     {sb.status === 'created' || sb.status === 'stopped' ? (
@@ -231,13 +238,13 @@ export default function Sandboxes() {
 
 function CreateSandboxModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState('')
-  const [policy, setPolicy] = useState('api-only')
-  const [presets, setPresets] = useState<SandboxPreset[]>([])
+  const [tier, setTier] = useState(2)
+  const [tiers, setTiers] = useState<SandboxTier[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    sandboxAPI.presets().then(setPresets).catch(() => {})
+    sandboxAPI.tiers().then(setTiers).catch(() => {})
   }, [])
 
   const handleSubmit = async () => {
@@ -253,7 +260,7 @@ function CreateSandboxModal({ onClose, onCreated }: { onClose: () => void; onCre
     setSubmitting(true)
     setError('')
     try {
-      await sandboxAPI.create(name.trim(), policy)
+      await sandboxAPI.create(name.trim(), tier)
       onCreated()
     } catch (e) {
       setError((e as Error).message)
@@ -261,6 +268,8 @@ function CreateSandboxModal({ onClose, onCreated }: { onClose: () => void; onCre
       setSubmitting(false)
     }
   }
+
+  const tierIcons: Record<number, string> = { 1: '\u{1F512}', 2: '\u{1F510}', 3: '\u{1F513}', 4: '\u{1F680}' }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
@@ -280,41 +289,40 @@ function CreateSandboxModal({ onClose, onCreated }: { onClose: () => void; onCre
           </div>
 
           <div>
-            <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Network Policy</label>
+            <label className="block text-sm text-[var(--text-secondary)] mb-1.5">Security Tier</label>
             <div className="space-y-2">
-              {presets.map(p => (
+              {tiers.map(t => (
                 <label
-                  key={p.name}
+                  key={t.level}
                   className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                    policy === p.name
+                    tier === t.level
                       ? 'border-[var(--accent)] bg-[var(--accent)]/5'
                       : 'border-[var(--border)] hover:border-[var(--text-tertiary)]'
                   }`}
                 >
                   <input
                     type="radio"
-                    name="policy"
-                    value={p.name}
-                    checked={policy === p.name}
-                    onChange={() => setPolicy(p.name)}
+                    name="tier"
+                    value={t.level}
+                    checked={tier === t.level}
+                    onChange={() => setTier(t.level)}
                     className="mt-0.5"
                   />
                   <div>
                     <div className="text-sm font-medium text-[var(--text)]">
-                      {POLICY_LABELS[p.name] || p.name}
+                      {tierIcons[t.level] || ''} Tier {t.level} — {t.name}
                     </div>
                     <div className="text-xs text-[var(--text-tertiary)] mt-0.5">
-                      {p.description}
+                      {t.description}
                     </div>
-                    {p.allowed_hosts && p.allowed_hosts.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1.5">
-                        {p.allowed_hosts.map(h => (
-                          <span key={h} className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--text-tertiary)] font-mono">
-                            {h}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {t.allow_browser && <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-400">Browser</span>}
+                      {t.allow_exec && <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400">Shell</span>}
+                      {t.persistent && <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-400">Persistent</span>}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--bg-hover)] text-[var(--text-tertiary)]">
+                        {t.memory_mb > 0 ? `${t.memory_mb} MB` : 'No limit'}
+                      </span>
+                    </div>
                   </div>
                 </label>
               ))}

@@ -249,6 +249,10 @@ func (g *Gateway) handleListPresets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"presets": sandbox.ListPresets()})
 }
 
+func (g *Gateway) handleListTiers(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{"tiers": sandbox.ListTiers()})
+}
+
 // stripDockerLogHeaders removes the 8-byte Docker multiplex log headers.
 // Docker log format: [stream_type(1) 0 0 0 size(4)] payload
 func stripDockerLogHeaders(data []byte) []byte {

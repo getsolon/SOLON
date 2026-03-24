@@ -160,6 +160,7 @@ func (g *Gateway) setupRoutes() {
 		r.Get("/api/v1/sandboxes", g.handleListSandboxes)
 		r.Post("/api/v1/sandboxes", g.handleCreateSandbox)
 		r.Get("/api/v1/sandboxes/presets", g.handleListPresets)
+		r.Get("/api/v1/sandboxes/tiers", g.handleListTiers)
 		r.Get("/api/v1/sandboxes/{id}", g.handleGetSandbox)
 		r.Post("/api/v1/sandboxes/{id}/start", g.handleStartSandbox)
 		r.Post("/api/v1/sandboxes/{id}/stop", g.handleStopSandbox)

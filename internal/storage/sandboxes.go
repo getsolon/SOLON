@@ -12,6 +12,7 @@ type SandboxRecord struct {
 	ContainerID string
 	Status      string
 	Policy      string
+	Tier        int
 	APIKeyID    string
 	Config      string
 	CreatedAt   time.Time
@@ -20,15 +21,15 @@ type SandboxRecord struct {
 }
 
 // CreateSandbox inserts a new sandbox record.
-func (d *DB) CreateSandbox(id, name, containerID, policy, apiKeyID string, config *string) error {
+func (d *DB) CreateSandbox(id, name, containerID, policy string, tier int, apiKeyID string, config *string) error {
 	cfgVal := ""
 	if config != nil {
 		cfgVal = *config
 	}
 	_, err := d.db.Exec(
-		`INSERT INTO sandboxes (id, name, container_id, status, policy, api_key_id, config)
-		 VALUES (?, ?, ?, 'created', ?, ?, ?)`,
-		id, name, containerID, policy, apiKeyID, cfgVal,
+		`INSERT INTO sandboxes (id, name, container_id, status, policy, tier, api_key_id, config)
+		 VALUES (?, ?, ?, 'created', ?, ?, ?, ?)`,
+		id, name, containerID, policy, tier, apiKeyID, cfgVal,
 	)
 	if err != nil {
 		return fmt.Errorf("inserting sandbox: %w", err)
@@ -39,7 +40,7 @@ func (d *DB) CreateSandbox(id, name, containerID, policy, apiKeyID string, confi
 // GetSandbox returns a sandbox by ID.
 func (d *DB) GetSandbox(id string) (*SandboxRecord, error) {
 	row := d.db.QueryRow(
-		`SELECT id, name, container_id, status, policy, api_key_id, config, created_at, started_at, stopped_at
+		`SELECT id, name, container_id, status, policy, tier, api_key_id, config, created_at, started_at, stopped_at
 		 FROM sandboxes WHERE id = ?`, id,
 	)
 
@@ -47,7 +48,7 @@ func (d *DB) GetSandbox(id string) (*SandboxRecord, error) {
 	var containerID, apiKeyID, config *string
 	var startedAt, stoppedAt *string
 
-	if err := row.Scan(&sb.ID, &sb.Name, &containerID, &sb.Status, &sb.Policy, &apiKeyID, &config, &sb.CreatedAt, &startedAt, &stoppedAt); err != nil {
+	if err := row.Scan(&sb.ID, &sb.Name, &containerID, &sb.Status, &sb.Policy, &sb.Tier, &apiKeyID, &config, &sb.CreatedAt, &startedAt, &stoppedAt); err != nil {
 		return nil, fmt.Errorf("scanning sandbox: %w", err)
 	}
 
@@ -79,7 +80,7 @@ func (d *DB) GetSandbox(id string) (*SandboxRecord, error) {
 // ListSandboxes returns all sandboxes.
 func (d *DB) ListSandboxes() ([]*SandboxRecord, error) {
 	rows, err := d.db.Query(
-		`SELECT id, name, container_id, status, policy, api_key_id, config, created_at, started_at, stopped_at
+		`SELECT id, name, container_id, status, policy, tier, api_key_id, config, created_at, started_at, stopped_at
 		 FROM sandboxes ORDER BY created_at DESC`,
 	)
 	if err != nil {
@@ -93,7 +94,7 @@ func (d *DB) ListSandboxes() ([]*SandboxRecord, error) {
 		var containerID, apiKeyID, config *string
 		var startedAt, stoppedAt *string
 
-		if err := rows.Scan(&sb.ID, &sb.Name, &containerID, &sb.Status, &sb.Policy, &apiKeyID, &config, &sb.CreatedAt, &startedAt, &stoppedAt); err != nil {
+		if err := rows.Scan(&sb.ID, &sb.Name, &containerID, &sb.Status, &sb.Policy, &sb.Tier, &apiKeyID, &config, &sb.CreatedAt, &startedAt, &stoppedAt); err != nil {
 			return nil, fmt.Errorf("scanning sandbox row: %w", err)
 		}
 

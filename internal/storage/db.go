@@ -138,6 +138,9 @@ func (d *DB) migrate() error {
 			stopped_at   DATETIME
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_sandboxes_name ON sandboxes(name)`,
+
+		// V1.4: Tiered sandbox security
+		`ALTER TABLE sandboxes ADD COLUMN tier INTEGER DEFAULT 2`,
 	}
 
 	for _, m := range migrations {

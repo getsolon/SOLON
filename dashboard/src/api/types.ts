@@ -142,6 +142,7 @@ export interface SandboxInfo {
   container_id?: string
   status: string    // "created" | "running" | "stopped" | "failed"
   policy: string
+  tier: number      // 1=locked, 2=standard, 3=advanced, 4=maximum
   api_key_id?: string
   config?: SandboxConfig
   created_at: string
@@ -153,6 +154,17 @@ export interface SandboxConfig {
   env?: Record<string, string>
   image?: string
   memory?: number
+  tier?: number
+}
+
+export interface SandboxTier {
+  level: number
+  name: string
+  description: string
+  memory_mb: number
+  allow_exec: boolean
+  allow_browser: boolean
+  persistent: boolean
 }
 
 export interface SandboxPreset {
