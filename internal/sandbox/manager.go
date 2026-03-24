@@ -609,12 +609,12 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"NODE_ENV=production",
 			},
 			"Cmd": []string{
-				"openclaw", "gateway",
-				"--port", fmt.Sprintf("%d", gatewayPort),
-				"--bind", "lan",
-				"--allow-unconfigured",
-				"--auth", "token",
-				"--token", "solon-openclaw-token",
+				"sh", "-c",
+				fmt.Sprintf(
+					"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
+						"openclaw gateway --port %d --bind lan --allow-unconfigured --auth token --token solon-openclaw-token",
+					gatewayPort,
+				),
 			},
 			"Labels": map[string]string{
 				LabelManaged:   "true",
