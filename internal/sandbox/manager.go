@@ -622,6 +622,9 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				LabelSandboxID: sandboxID,
 				LabelPolicy:    "openclaw-gateway",
 			},
+			"ExposedPorts": map[string]any{
+				fmt.Sprintf("%d/tcp", gatewayPort): map[string]any{},
+			},
 			"HostConfig": map[string]any{
 				"NetworkMode": NetworkName,
 				"CapDrop":     []string{"ALL"},
@@ -629,6 +632,11 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"SecurityOpt": []string{"no-new-privileges"},
 				"ExtraHosts":  []string{"host.docker.internal:host-gateway"},
 				"Binds":       []string{"openclaw-data:/root/.openclaw"},
+				"PortBindings": map[string]any{
+					fmt.Sprintf("%d/tcp", gatewayPort): []map[string]string{
+						{"HostIp": "127.0.0.1", "HostPort": fmt.Sprintf("%d", gatewayPort)},
+					},
+				},
 			},
 		},
 	})

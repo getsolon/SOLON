@@ -54,13 +54,9 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Resolve upstream OpenClaw container IP
-	containerIP, err := g.sandboxes.OpenClawContainerIP(r.Context())
-	if err != nil {
-		writeError(w, http.StatusServiceUnavailable, "OpenClaw is not running — start it first via the dashboard or 'solon openclaw'")
-		return
-	}
-
-	upstreamURL := fmt.Sprintf("ws://%s:%d", containerIP, openclawGatewayPort)
+	// Connect via localhost — the container publishes port 18789 to the host.
+	// This is critical: OpenClaw only grants admin scopes to local connections.
+	upstreamURL := fmt.Sprintf("ws://127.0.0.1:%d", openclawGatewayPort)
 
 	// Validate origin (before upgrade)
 	if !g.isAllowedWSOrigin(r) {
@@ -89,7 +85,6 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	upstreamConn, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
 		HTTPHeader: http.Header{
 			"Authorization": []string{"Bearer " + openclawGatewayToken},
-			"Origin":        []string{fmt.Sprintf("http://localhost:%d", g.port)},
 		},
 	})
 	if err != nil {
