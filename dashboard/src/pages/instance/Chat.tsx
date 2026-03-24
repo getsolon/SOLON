@@ -45,7 +45,7 @@ export default function Chat() {
       if (status.running) {
         // OpenClaw agent is running — use HTTP agent API
         setMode('ws')  // 'ws' = agent mode in the UI
-        setIsConnecting(false)
+        setMode('sse')
       } else {
         // Load models for SSE fallback
         const modelList = await fetchJSON<{ models: ModelInfo[] }>('/api/v1/models').then(r => r.models || []).catch(() => [])
