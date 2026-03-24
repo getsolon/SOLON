@@ -66,6 +66,15 @@ export default function Chat() {
 
   useEffect(() => { connect() }, [])
 
+  async function fallbackToSSE() {
+    const modelList = await fetchJSON<{ models: ModelInfo[] }>('/api/v1/models').then(r => r.models || []).catch(() => [])
+    setModels(modelList)
+    if (modelList.length > 0 && !selectedModel) {
+      setSelectedModel(modelList[0].name)
+    }
+    setMode(modelList.length > 0 ? 'sse' : 'disconnected')
+  }
+
   function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const ws = new WebSocket(`${protocol}//${window.location.host}/api/v1/openclaw/ws`)
@@ -80,17 +89,15 @@ export default function Chat() {
       handleWSMessage(event.data)
     }
 
-    ws.onclose = (event) => {
+    ws.onclose = () => {
       wsRef.current = null
-      if (event.code !== 1000) {
-        setError('Agent disconnected')
-      }
-      setMode('disconnected')
+      // Fall back to SSE mode instead of disconnected
+      fallbackToSSE()
     }
 
     ws.onerror = () => {
       wsRef.current = null
-      setMode('disconnected')
+      fallbackToSSE()
     }
   }
 
