@@ -262,6 +262,67 @@ func (d *dockerClient) networkExists(ctx context.Context, name string) bool {
 	return resp.StatusCode == http.StatusOK
 }
 
+// containerExec runs a command inside a container and returns the output.
+func (d *dockerClient) containerExec(ctx context.Context, id string, cmd []string, env []string) (string, error) {
+	// Step 1: Create exec instance
+	execBody := map[string]any{
+		"AttachStdout": true,
+		"AttachStderr": true,
+		"Cmd":          cmd,
+	}
+	if len(env) > 0 {
+		execBody["Env"] = env
+	}
+
+	resp, err := d.do(ctx, "POST", "/containers/"+id+"/exec", execBody)
+	if err != nil {
+		return "", fmt.Errorf("creating exec: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusCreated {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("creating exec: status %d: %s", resp.StatusCode, string(body))
+	}
+
+	var execResult struct {
+		ID string `json:"Id"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&execResult); err != nil {
+		return "", fmt.Errorf("decoding exec ID: %w", err)
+	}
+
+	// Step 2: Start exec and capture output
+	startResp, err := d.do(ctx, "POST", "/exec/"+execResult.ID+"/start", map[string]any{
+		"Detach": false,
+		"Tty":    false,
+	})
+	if err != nil {
+		return "", fmt.Errorf("starting exec: %w", err)
+	}
+	defer func() { _ = startResp.Body.Close() }()
+
+	output, _ := io.ReadAll(startResp.Body)
+
+	// Step 3: Check exit code
+	inspResp, err := d.do(ctx, "GET", "/exec/"+execResult.ID+"/json", nil)
+	if err != nil {
+		return string(output), nil // Return output even if inspect fails
+	}
+	defer func() { _ = inspResp.Body.Close() }()
+
+	var inspResult struct {
+		ExitCode int `json:"ExitCode"`
+	}
+	_ = json.NewDecoder(inspResp.Body).Decode(&inspResult)
+
+	if inspResult.ExitCode != 0 {
+		return string(output), fmt.Errorf("command exited with code %d: %s", inspResult.ExitCode, strings.TrimSpace(string(output)))
+	}
+
+	return strings.TrimSpace(string(output)), nil
+}
+
 // containerStats returns resource usage stats for a container.
 func (d *dockerClient) containerStats(ctx context.Context, id string) (*containerStatsResult, error) {
 	// stream=false returns a single snapshot

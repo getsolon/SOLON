@@ -184,6 +184,67 @@ func (g *Gateway) handleSandboxStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+func (g *Gateway) handleOpenClawStart(w http.ResponseWriter, r *http.Request) {
+	if g.sandboxes == nil {
+		writeError(w, http.StatusServiceUnavailable, "sandbox management not available (Docker not detected)")
+		return
+	}
+
+	// Get provider key (prefer anthropic)
+	providerKey := ""
+	for _, name := range []string{"anthropic", "openai"} {
+		key, err := g.store.GetProviderKey(name)
+		if err == nil && key != "" {
+			providerKey = key
+			break
+		}
+	}
+	if providerKey == "" {
+		providers, _ := g.store.LoadProviders()
+		if len(providers) > 0 {
+			providerKey = providers[0].APIKey
+		}
+	}
+	if providerKey == "" {
+		writeError(w, http.StatusBadRequest, "no inference provider configured — add one at /providers first")
+		return
+	}
+
+	status, err := g.sandboxes.EnsureOpenClaw(r.Context(), providerKey)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, status)
+}
+
+func (g *Gateway) handleOpenClawStatus(w http.ResponseWriter, r *http.Request) {
+	if g.sandboxes == nil {
+		writeJSON(w, http.StatusOK, map[string]any{"available": false})
+		return
+	}
+
+	sandboxes, err := g.sandboxes.List(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	for _, sb := range sandboxes {
+		if sb.Name == "openclaw" {
+			writeJSON(w, http.StatusOK, map[string]any{
+				"available": true,
+				"sandbox":   sb,
+				"running":   sb.Status == "running",
+			})
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"available": true, "running": false})
+}
+
 func (g *Gateway) handleListPresets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"presets": sandbox.ListPresets()})
 }

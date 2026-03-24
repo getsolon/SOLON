@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	osexec "os/exec"
 	"strings"
 	"time"
 
@@ -39,6 +40,7 @@ func main() {
 		keysCmd(),
 		providersCmd(),
 		sandboxesCmd(),
+		openclawCmd(),
 		tunnelCmd(),
 		statusCmd(),
 		versionCmd(),
@@ -749,6 +751,150 @@ func providersCmd() *cobra.Command {
 				}
 
 				fmt.Printf("Provider %s removed.\n", args[0])
+				return nil
+			},
+		},
+	)
+
+	return cmd
+}
+
+func openclawCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "openclaw",
+		Short: "Launch OpenClaw in a secure sandbox (one command)",
+		Long:  "Creates a sandbox, installs OpenClaw, starts the gateway, and opens the TUI.\nRequires Docker and at least one configured provider (e.g., 'solon providers add anthropic').",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			db, err := storage.Open("")
+			if err != nil {
+				return fmt.Errorf("opening database: %w", err)
+			}
+			defer func() { _ = db.Close() }()
+
+			// Check Docker
+			mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+			if !mgr.Available(cmd.Context()) {
+				return fmt.Errorf("Docker is not running — OpenClaw requires Docker for sandboxing")
+			}
+
+			// Get provider key (prefer anthropic, fall back to first available)
+			providerKey := ""
+			providerName := ""
+			for _, name := range []string{"anthropic", "openai"} {
+				key, err := db.GetProviderKey(name)
+				if err == nil && key != "" {
+					providerKey = key
+					providerName = name
+					break
+				}
+			}
+			if providerKey == "" {
+				// Try any provider
+				providers, err := db.LoadProviders()
+				if err == nil && len(providers) > 0 {
+					providerKey = providers[0].APIKey
+					providerName = providers[0].Name
+				}
+			}
+			if providerKey == "" {
+				fmt.Println("No inference provider configured.")
+				fmt.Println()
+				fmt.Println("Add one first:")
+				fmt.Println("  solon providers add anthropic")
+				fmt.Println("  solon providers add openai")
+				return fmt.Errorf("no provider configured")
+			}
+
+			fmt.Printf("Using provider: %s\n", providerName)
+			fmt.Println()
+
+			// Ensure OpenClaw is set up
+			status, err := mgr.EnsureOpenClaw(cmd.Context(), providerKey)
+			if err != nil {
+				return fmt.Errorf("setting up OpenClaw: %w", err)
+			}
+
+			fmt.Println()
+			fmt.Println("  OpenClaw is ready!")
+			fmt.Printf("  Sandbox:  %s\n", status.SandboxName)
+			fmt.Printf("  Gateway:  ws://127.0.0.1:%d (inside container)\n", status.GatewayPort)
+			fmt.Println()
+			fmt.Println("  Connecting to TUI...")
+			fmt.Println()
+
+			// Exec into the container with openclaw tui
+			sb, _ := mgr.Get(cmd.Context(), status.SandboxID)
+			if sb == nil || sb.ContainerID == "" {
+				return fmt.Errorf("sandbox container not found")
+			}
+
+			// Attach interactively to the container with openclaw tui
+			dockerCmd := osexec.Command("docker", "exec", "-it",
+				"-e", fmt.Sprintf("ANTHROPIC_API_KEY=%s", providerKey),
+				"-e", "OPENCLAW_GATEWAY_TOKEN=solon-openclaw-token",
+				sb.ContainerID,
+				"openclaw", "tui", "--token", "solon-openclaw-token",
+			)
+			dockerCmd.Stdin = os.Stdin
+			dockerCmd.Stdout = os.Stdout
+			dockerCmd.Stderr = os.Stderr
+			return dockerCmd.Run()
+		},
+	}
+
+	cmd.AddCommand(
+		&cobra.Command{
+			Use:   "stop",
+			Short: "Stop the OpenClaw sandbox",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				sandboxes, err := mgr.List(cmd.Context())
+				if err != nil {
+					return err
+				}
+				for _, sb := range sandboxes {
+					if sb.Name == "openclaw" {
+						if err := mgr.Stop(cmd.Context(), sb.ID); err != nil {
+							return err
+						}
+						fmt.Println("OpenClaw sandbox stopped.")
+						return nil
+					}
+				}
+				fmt.Println("No OpenClaw sandbox found.")
+				return nil
+			},
+		},
+		&cobra.Command{
+			Use:   "status",
+			Short: "Show OpenClaw status",
+			RunE: func(cmd *cobra.Command, args []string) error {
+				db, err := storage.Open("")
+				if err != nil {
+					return fmt.Errorf("opening database: %w", err)
+				}
+				defer func() { _ = db.Close() }()
+
+				mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
+				sandboxes, err := mgr.List(cmd.Context())
+				if err != nil {
+					return err
+				}
+				for _, sb := range sandboxes {
+					if sb.Name == "openclaw" {
+						fmt.Printf("Sandbox:  %s (%s)\n", sb.Name, sb.Status)
+						fmt.Printf("Policy:   %s\n", sb.Policy)
+						fmt.Printf("Created:  %s\n", sb.CreatedAt.Format("2006-01-02 15:04"))
+						return nil
+					}
+				}
+				fmt.Println("OpenClaw not set up yet. Run 'solon openclaw' to start.")
 				return nil
 			},
 		},

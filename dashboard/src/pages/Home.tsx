@@ -4,6 +4,7 @@ import { useServerStore } from '../store/server'
 import Card from '../components/Card'
 import Setup from './instance/Setup'
 import { providerAPI, sandboxAPI } from '../api/local'
+import { fetchJSON } from '../api/client'
 import type { UsageStats, ModelInfo } from '../api/types'
 
 function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
@@ -98,6 +99,9 @@ export default function Home() {
         {version && <span className="text-xs font-mono text-[var(--text-tertiary)]">v{version}</span>}
       </div>
 
+      {/* OpenClaw launch card */}
+      {hasProviders && <OpenClawCard />}
+
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard
@@ -135,5 +139,77 @@ export default function Home() {
         />
       </div>
     </main>
+  )
+}
+
+function OpenClawCard() {
+  const [launching, setLaunching] = useState(false)
+  const [status, setStatus] = useState<{ running: boolean; sandbox?: { status: string } } | null>(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetchJSON<{ available: boolean; running: boolean; sandbox?: { status: string } }>('/api/v1/openclaw/status')
+      .then(setStatus)
+      .catch(() => {})
+  }, [])
+
+  const handleLaunch = async () => {
+    setLaunching(true)
+    setError('')
+    try {
+      await fetchJSON('/api/v1/openclaw/start', { method: 'POST' })
+      // Refresh status
+      const s = await fetchJSON<{ available: boolean; running: boolean; sandbox?: { status: string } }>('/api/v1/openclaw/status')
+      setStatus(s)
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setLaunching(false)
+    }
+  }
+
+  const isRunning = status?.running
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">&#x1F99E;</span>
+          <div>
+            <h3 className="text-sm font-semibold text-[var(--text)]">OpenClaw</h3>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              {isRunning ? 'Running in secure sandbox' : 'AI agent framework — run safely in a sandbox'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isRunning && (
+            <span className="flex items-center gap-1.5 text-xs text-green-400">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              Running
+            </span>
+          )}
+          <button
+            onClick={handleLaunch}
+            disabled={launching}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-opacity disabled:opacity-50 ${
+              isRunning
+                ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)] hover:bg-[var(--border)]'
+                : 'bg-[var(--accent)] text-white hover:opacity-90'
+            }`}
+          >
+            {launching ? 'Starting...' : isRunning ? 'Restart' : 'Launch OpenClaw'}
+          </button>
+        </div>
+      </div>
+      {isRunning && (
+        <p className="mt-3 text-xs text-[var(--text-tertiary)] font-mono bg-[var(--bg)] rounded-lg px-3 py-2">
+          solon openclaw
+        </p>
+      )}
+      {error && (
+        <p className="mt-2 text-xs text-red-400">{error}</p>
+      )}
+    </Card>
   )
 }

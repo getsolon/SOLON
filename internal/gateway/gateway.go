@@ -166,6 +166,10 @@ func (g *Gateway) setupRoutes() {
 		r.Delete("/api/v1/sandboxes/{id}", g.handleRemoveSandbox)
 		r.Get("/api/v1/sandboxes/{id}/logs", g.handleSandboxLogs)
 		r.Get("/api/v1/sandboxes/{id}/stats", g.handleSandboxStats)
+
+		// OpenClaw one-click launch
+		r.Post("/api/v1/openclaw/start", g.handleOpenClawStart)
+		r.Get("/api/v1/openclaw/status", g.handleOpenClawStatus)
 	})
 
 	// Dashboard — serve embedded static files (no auth, localhost only)
