@@ -143,6 +143,15 @@ func (d *DB) UpdateSandboxStatus(id, status string) error {
 	return nil
 }
 
+// UpdateSandboxContainer updates the container ID for a sandbox.
+func (d *DB) UpdateSandboxContainer(id, containerID string) error {
+	_, err := d.db.Exec(`UPDATE sandboxes SET container_id = ? WHERE id = ?`, containerID, id)
+	if err != nil {
+		return fmt.Errorf("updating sandbox container: %w", err)
+	}
+	return nil
+}
+
 // DeleteSandbox removes a sandbox record from the database.
 func (d *DB) DeleteSandbox(id string) error {
 	_, err := d.db.Exec(`DELETE FROM sandboxes WHERE id = ?`, id)

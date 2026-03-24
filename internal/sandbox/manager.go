@@ -326,109 +326,189 @@ type OpenClawStatus struct {
 	Running     bool   `json:"running"`
 }
 
-// EnsureOpenClaw makes sure a sandbox exists, is running, has OpenClaw installed,
-// and the gateway is started. Returns the sandbox and gateway status.
+// EnsureOpenClaw makes sure a sandbox exists with OpenClaw installed and the
+// gateway running as the container's main process.
 func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*OpenClawStatus, error) {
 	const sandboxName = "openclaw"
 	const gatewayPort = 18789
+	const imageTag = "solon/openclaw:latest"
 
-	// Step 1: Ensure sandbox exists
-	var sb *Sandbox
-	sandboxes, err := m.List(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("listing sandboxes: %w", err)
+	if err := m.EnsureNetwork(ctx); err != nil {
+		return nil, err
 	}
-	for _, s := range sandboxes {
+
+	solonHost := m.gatewayIP
+	if solonHost == "" {
+		solonHost = "host.docker.internal"
+	}
+
+	status := &OpenClawStatus{
+		SandboxName: sandboxName,
+		GatewayPort: gatewayPort,
+	}
+
+	// Check if we already have a running openclaw container
+	containers, _ := m.docker.containerList(ctx, LabelManaged+"=true")
+	for _, c := range containers {
+		if c.Labels[LabelPolicy] == "openclaw-gateway" && c.State == "running" {
+			status.SandboxID = c.Labels[LabelSandboxID]
+			status.Installed = true
+			status.Running = true
+			return status, nil
+		}
+	}
+
+	// Step 1: Build the OpenClaw image if it doesn't exist
+	// Create a temporary container, install OpenClaw, commit as image
+	log.Println("[openclaw] Preparing OpenClaw image...")
+
+	// Check if our image already exists
+	imgResp, _ := m.docker.do(ctx, "GET", "/images/"+imageTag+"/json", nil)
+	needsBuild := true
+	if imgResp != nil {
+		_ = imgResp.Body.Close()
+		if imgResp.StatusCode == 200 {
+			needsBuild = false
+			log.Println("[openclaw] Image exists, skipping build")
+		}
+	}
+
+	if needsBuild {
+		log.Println("[openclaw] Installing OpenClaw into image (this takes ~30s)...")
+
+		// Create a temp container to install OpenClaw
+		tmpID, err := m.docker.containerCreate(ctx, containerConfig{
+			Name: "openclaw-build-tmp",
+			Body: map[string]any{
+				"Image": DefaultImage,
+				"Cmd":   []string{"sleep", "infinity"},
+			},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("creating build container: %w", err)
+		}
+
+		if err := m.docker.containerStart(ctx, tmpID); err != nil {
+			_ = m.docker.containerRemove(ctx, tmpID)
+			return nil, fmt.Errorf("starting build container: %w", err)
+		}
+
+		// Install OpenClaw
+		_, err = m.docker.containerExec(ctx, tmpID, []string{"npm", "install", "-g", "openclaw"}, nil)
+		if err != nil {
+			_ = m.docker.containerRemove(ctx, tmpID)
+			return nil, fmt.Errorf("installing openclaw: %w", err)
+		}
+
+		// Write OpenClaw config
+		configJSON := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
+		_, _ = m.docker.containerExec(ctx, tmpID,
+			[]string{"sh", "-c", "mkdir -p /root/.openclaw && printf '%s' '" + configJSON + "' > /root/.openclaw/openclaw.json"},
+			nil,
+		)
+
+		// Commit as image
+		commitResp, err := m.docker.do(ctx, "POST",
+			fmt.Sprintf("/commit?container=%s&repo=solon/openclaw&tag=latest&pause=true", tmpID),
+			nil,
+		)
+		if err != nil {
+			_ = m.docker.containerRemove(ctx, tmpID)
+			return nil, fmt.Errorf("committing openclaw image: %w", err)
+		}
+		_ = commitResp.Body.Close()
+
+		// Clean up build container
+		_ = m.docker.containerStop(ctx, tmpID, 2)
+		_ = m.docker.containerRemove(ctx, tmpID)
+
+		log.Println("[openclaw] Image built: solon/openclaw:latest")
+	}
+
+	// Step 2: Remove any existing openclaw sandbox container
+	for _, c := range containers {
+		if c.Labels[LabelPolicy] == "openclaw-gateway" {
+			_ = m.docker.containerRemove(ctx, c.ID)
+		}
+	}
+	// Also remove by name
+	_ = m.docker.containerRemove(ctx, "openclaw-sandbox-openclaw")
+
+	// Step 3: Find or create the sandbox DB record
+	var sandboxID string
+	dbSandboxes, _ := m.store.ListSandboxes()
+	for _, s := range dbSandboxes {
 		if s.Name == sandboxName {
-			sb = s
+			sandboxID = s.ID
+			break
+		}
+	}
+	if sandboxID == "" {
+		sandboxID = uuid.New().String()
+		_ = m.store.CreateSandbox(sandboxID, sandboxName, "", "full", "", nil)
+	}
+	status.SandboxID = sandboxID
+
+	// Step 4: Create and start the container with gateway as main process
+	log.Println("[openclaw] Starting OpenClaw gateway...")
+
+	containerID, err := m.docker.containerCreate(ctx, containerConfig{
+		Name: "openclaw-sandbox-openclaw",
+		Body: map[string]any{
+			"Image": imageTag,
+			"Env": []string{
+				fmt.Sprintf("ANTHROPIC_API_KEY=%s", providerKey),
+				"OPENCLAW_GATEWAY_TOKEN=solon-openclaw-token",
+				"OPENCLAW_NO_RESPAWN=1",
+				fmt.Sprintf("SOLON_ENDPOINT=http://%s:%d", solonHost, m.solonPort),
+				"NODE_ENV=production",
+			},
+			"Cmd": []string{
+				"openclaw", "gateway",
+				"--port", fmt.Sprintf("%d", gatewayPort),
+				"--allow-unconfigured",
+				"--auth", "token",
+				"--token", "solon-openclaw-token",
+			},
+			"Labels": map[string]string{
+				LabelManaged:   "true",
+				LabelSandboxID: sandboxID,
+				LabelPolicy:    "openclaw-gateway",
+			},
+			"HostConfig": map[string]any{
+				"NetworkMode": NetworkName,
+				"CapDrop":     []string{"ALL"},
+				"CapAdd":      []string{"NET_BIND_SERVICE"},
+				"SecurityOpt": []string{"no-new-privileges"},
+				"ExtraHosts":  []string{"host.docker.internal:host-gateway"},
+			},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating gateway container: %w", err)
+	}
+
+	_ = m.store.UpdateSandboxContainer(sandboxID, containerID)
+
+	if err := m.docker.containerStart(ctx, containerID); err != nil {
+		return nil, fmt.Errorf("starting gateway container: %w", err)
+	}
+
+	// Wait for gateway to be ready
+	log.Println("[openclaw] Waiting for gateway...")
+	for i := 0; i < 10; i++ {
+		time.Sleep(2 * time.Second)
+		state, err := m.docker.containerInspect(ctx, containerID)
+		if err == nil && state.Running {
 			break
 		}
 	}
 
-	if sb == nil {
-		log.Println("[openclaw] Creating sandbox...")
-		sb, err = m.Create(ctx, CreateRequest{
-			Name:   sandboxName,
-			Policy: "full",
-		})
-		if err != nil {
-			return nil, fmt.Errorf("creating sandbox: %w", err)
-		}
-	}
+	_ = m.store.UpdateSandboxStatus(sandboxID, StatusRunning)
 
-	// Step 2: Ensure sandbox is running
-	if sb.Status != StatusRunning {
-		log.Println("[openclaw] Starting sandbox...")
-		if err := m.Start(ctx, sb.ID); err != nil {
-			return nil, fmt.Errorf("starting sandbox: %w", err)
-		}
-	}
-
-	// Step 3: Check if OpenClaw is installed
-	_, err = m.docker.containerExec(ctx, sb.ContainerID, []string{"which", "openclaw"}, nil)
-	if err != nil {
-		log.Println("[openclaw] Installing OpenClaw (this takes ~30s)...")
-		_, installErr := m.docker.containerExec(ctx, sb.ContainerID,
-			[]string{"npm", "install", "-g", "openclaw"},
-			nil,
-		)
-		if installErr != nil {
-			return nil, fmt.Errorf("installing openclaw: %w", installErr)
-		}
-		log.Println("[openclaw] OpenClaw installed")
-	}
-
-	// Step 4: Build environment for the gateway
-	env := []string{
-		fmt.Sprintf("ANTHROPIC_API_KEY=%s", providerKey),
-		fmt.Sprintf("OPENCLAW_GATEWAY_TOKEN=%s", "solon-openclaw-token"),
-		"OPENCLAW_NO_RESPAWN=1",
-	}
-
-	// Step 5: Check if gateway is already running
-	pidOut, _ := m.docker.containerExec(ctx, sb.ContainerID,
-		[]string{"sh", "-c", "pgrep -f 'openclaw gateway' || echo ''"},
-		nil,
-	)
-
-	status := &OpenClawStatus{
-		SandboxID:   sb.ID,
-		SandboxName: sandboxName,
-		Installed:   true,
-		GatewayPort: gatewayPort,
-	}
-
-	if pidOut != "" {
-		status.GatewayPID = pidOut
-		status.Running = true
-		return status, nil
-	}
-
-	// Step 6: Write config and start gateway
-	log.Println("[openclaw] Starting OpenClaw gateway...")
-
-	// Write config
-	configJSON := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
-	_, _ = m.docker.containerExec(ctx, sb.ContainerID,
-		[]string{"sh", "-c", fmt.Sprintf("mkdir -p /root/.openclaw && echo '%s' > /root/.openclaw/openclaw.json", configJSON)},
-		nil,
-	)
-
-	// Start gateway in background
-	gwCmd := fmt.Sprintf(
-		"nohup openclaw gateway --port %d --allow-unconfigured --auth token --token solon-openclaw-token > /tmp/openclaw-gateway.log 2>&1 &",
-		gatewayPort,
-	)
-	_, err = m.docker.containerExec(ctx, sb.ContainerID,
-		[]string{"sh", "-c", gwCmd},
-		env,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("starting openclaw gateway: %w", err)
-	}
-
+	status.Installed = true
 	status.Running = true
-	log.Println("[openclaw] Gateway started on port", gatewayPort)
+	log.Println("[openclaw] Ready")
 	return status, nil
 }
 
