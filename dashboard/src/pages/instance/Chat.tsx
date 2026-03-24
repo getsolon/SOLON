@@ -43,7 +43,9 @@ export default function Chat() {
       const status = await fetchJSON<{ available: boolean; running: boolean }>('/api/v1/openclaw/status')
 
       if (status.running) {
-        connectWebSocket()
+        // OpenClaw agent is running — use HTTP agent API
+        setMode('ws')  // 'ws' = agent mode in the UI
+        setIsConnecting(false)
       } else {
         // Load models for SSE fallback
         const modelList = await fetchJSON<{ models: ModelInfo[] }>('/api/v1/models').then(r => r.models || []).catch(() => [])
@@ -235,24 +237,48 @@ export default function Chat() {
     }
     setMessages(prev => [...prev, userMsg])
 
-    if (mode === 'ws' && wsRef.current?.readyState === WebSocket.OPEN) {
-      // Send via OpenClaw protocol
-      // Add streaming placeholder
-      setMessages(prev => [...prev, {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: '',
-        timestamp: Date.now(),
-        isStreaming: true,
-      }])
-      sendWSRequest('chat.send', {
-        sessionKey: 'main',
-        message: text,
-        idempotencyKey: crypto.randomUUID(),
-      })
+    if (mode === 'ws') {
+      // Send via OpenClaw agent HTTP API (handles auth internally)
+      await sendViaAgent(text)
     } else {
       // Send via SSE to Solon's inference API
       await sendViaSSE(text)
+    }
+  }
+
+  async function sendViaAgent(text: string) {
+    setSending(true)
+    const assistantId = crypto.randomUUID()
+    setMessages(prev => [...prev, {
+      id: assistantId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      isStreaming: true,
+    }])
+
+    try {
+      const resp = await fetch('/api/v1/openclaw/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: 'Agent error' }))
+        throw new Error((err as { error?: string }).error || `HTTP ${resp.status}`)
+      }
+
+      const data = await resp.json() as { reply?: string; content?: string; result?: string; output?: string }
+      const content = data.reply || data.content || data.result || data.output || JSON.stringify(data)
+      setMessages(prev => prev.map(m =>
+        m.id === assistantId ? { ...m, content, isStreaming: false } : m
+      ))
+    } catch (e) {
+      setError((e as Error).message)
+      setMessages(prev => prev.filter(m => m.id !== assistantId || m.content !== ''))
+    } finally {
+      setSending(false)
     }
   }
 

@@ -611,33 +611,48 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 			"Cmd": []string{
 				"sh", "-c",
 				fmt.Sprintf(
-					// 1. Write a WebSocket bridge that connects locally (gets admin scopes)
-					//    and exposes a proxy on 0.0.0.0 for external connections
-					"cat > /tmp/ws-bridge.js << 'BRIDGE'\n"+
-						"const WebSocket = require('ws');\n"+
-						"const wss = new WebSocket.Server({ port: %d, host: '0.0.0.0' });\n"+
-						"console.log('[bridge] listening on 0.0.0.0:%d');\n"+
-						"wss.on('connection', (client) => {\n"+
-						"  const up = new WebSocket('ws://127.0.0.1:%d');\n"+
-						"  up.on('open', () => {\n"+
-						"    client.on('message', d => { try { up.send(d) } catch {} });\n"+
-						"    up.on('message', d => { try { client.send(d) } catch {} });\n"+
-						"  });\n"+
-						"  up.on('close', () => client.close());\n"+
-						"  client.on('close', () => up.close());\n"+
-						"  up.on('error', () => client.close());\n"+
-						"  client.on('error', () => up.close());\n"+
+					// Start gateway on loopback + expose a simple HTTP API for
+					// sending messages via 'openclaw agent' (handles auth internally)
+					"cat > /tmp/agent-api.mjs << 'API'\n"+
+						"import { createServer } from 'http';\n"+
+						"import { execSync } from 'child_process';\n"+
+						"const PORT = %d;\n"+
+						"const server = createServer((req, res) => {\n"+
+						"  if (req.method === 'POST' && req.url === '/send') {\n"+
+						"    let body = '';\n"+
+						"    req.on('data', c => body += c);\n"+
+						"    req.on('end', () => {\n"+
+						"      try {\n"+
+						"        const { message } = JSON.parse(body);\n"+
+						"        const result = execSync(\n"+
+						"          `openclaw agent --message \"${message.replace(/\"/g, '\\\\\"')}\" --json --timeout-ms 120000`,\n"+
+						"          { timeout: 130000, encoding: 'utf8', env: { ...process.env, HOME: '/root' } }\n"+
+						"        );\n"+
+						"        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });\n"+
+						"        res.end(result);\n"+
+						"      } catch (e) {\n"+
+						"        res.writeHead(500, { 'Content-Type': 'application/json' });\n"+
+						"        res.end(JSON.stringify({ error: e.message || 'agent error' }));\n"+
+						"      }\n"+
+						"    });\n"+
+						"  } else if (req.method === 'GET' && req.url === '/health') {\n"+
+						"    res.writeHead(200, { 'Content-Type': 'application/json' });\n"+
+						"    res.end('{\"ok\":true}');\n"+
+						"  } else if (req.method === 'OPTIONS') {\n"+
+						"    res.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST', 'Access-Control-Allow-Headers': 'Content-Type' });\n"+
+						"    res.end();\n"+
+						"  } else {\n"+
+						"    res.writeHead(404);\n"+
+						"    res.end();\n"+
+						"  }\n"+
 						"});\n"+
-						"BRIDGE\n"+
-						// 2. Install ws module if needed
-						"cd /tmp && npm list ws 2>/dev/null || npm init -y 2>/dev/null && npm install ws 2>/dev/null; "+
-						// 3. Start gateway on loopback with no auth (safe — not exposed)
-						"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
+						"server.listen(PORT, '0.0.0.0', () => console.log('[agent-api] listening on 0.0.0.0:' + PORT));\n"+
+						"API\n"+
+						// Start gateway on loopback (openclaw agent connects locally)
 						"openclaw gateway --port %d --bind loopback --allow-unconfigured --auth none &"+
 						" sleep 5; "+
-						// 4. Start the bridge
-						"exec node /tmp/ws-bridge.js",
-					gatewayPort+1, gatewayPort+1, gatewayPort, gatewayPort,
+						"exec node /tmp/agent-api.mjs",
+					gatewayPort+1, gatewayPort,
 				),
 			},
 			"Labels": map[string]string{

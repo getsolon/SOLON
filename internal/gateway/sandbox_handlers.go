@@ -184,6 +184,40 @@ func (g *Gateway) handleSandboxStats(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+func (g *Gateway) handleOpenClawSend(w http.ResponseWriter, r *http.Request) {
+	if g.sandboxes == nil {
+		writeError(w, http.StatusServiceUnavailable, "sandbox management not available")
+		return
+	}
+
+	containerIP, err := g.sandboxes.OpenClawContainerIP(r.Context())
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "OpenClaw is not running")
+		return
+	}
+
+	// Forward the request body to the agent API inside the container
+	agentURL := fmt.Sprintf("http://%s:18790/send", containerIP)
+	proxyReq, err := http.NewRequestWithContext(r.Context(), "POST", agentURL, r.Body)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to create request")
+		return
+	}
+	proxyReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 2 * time.Minute}
+	resp, err := client.Do(proxyReq)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("agent error: %v", err))
+		return
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(resp.StatusCode)
+	_, _ = io.Copy(w, resp.Body)
+}
+
 func (g *Gateway) handleOpenClawStart(w http.ResponseWriter, r *http.Request) {
 	if g.sandboxes == nil {
 		writeError(w, http.StatusServiceUnavailable, "sandbox management not available (Docker not detected)")
