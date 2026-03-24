@@ -81,7 +81,10 @@ export default function Chat() {
         throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${resp.status}`)
       }
       const data = await resp.json() as Record<string, unknown>
-      const content = (data.reply || data.content || data.result || data.output || JSON.stringify(data)) as string
+      // OpenClaw agent response: result.payloads[0].text
+      const result = data.result as Record<string, unknown> | undefined
+      const payloads = result?.payloads as { text?: string }[] | undefined
+      const content = payloads?.[0]?.text || (data.reply as string) || (data.content as string) || JSON.stringify(data)
       setMessages(prev => prev.map(m => m.id === id ? { ...m, content, isStreaming: false } : m))
     } catch (e) {
       setError((e as Error).message)
