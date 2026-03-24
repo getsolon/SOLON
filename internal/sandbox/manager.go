@@ -625,7 +625,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 						"      try {\n"+
 						"        const { message } = JSON.parse(body);\n"+
 						"        const result = execSync(\n"+
-						"          `openclaw agent --message \"${message.replace(/\"/g, '\\\\\"')}\" --json --timeout 120`,\n"+
+						"          `openclaw agent --agent main --message \"${message.replace(/\"/g, '\\\\\"')}\" --json --timeout 120`,\n"+
 						"          { timeout: 130000, encoding: 'utf8', env: { ...process.env, HOME: '/root' } }\n"+
 						"        );\n"+
 						"        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });\n"+
