@@ -89,6 +89,7 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	upstreamConn, _, err := websocket.Dial(ctx, upstreamURL, &websocket.DialOptions{
 		HTTPHeader: http.Header{
 			"Authorization": []string{"Bearer " + openclawGatewayToken},
+			"Origin":        []string{fmt.Sprintf("http://localhost:%d", g.port)},
 		},
 	})
 	if err != nil {

@@ -612,8 +612,9 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"sh", "-c",
 				fmt.Sprintf(
 					"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
+						"openclaw config set gateway.controlUi.allowedOrigins '[\"http://localhost:%d\",\"http://127.0.0.1:%d\",\"https://app.getsolon.dev\"]' --strict-json 2>/dev/null; "+
 						"openclaw gateway --port %d --bind lan --allow-unconfigured --auth token --token solon-openclaw-token",
-					gatewayPort,
+					m.solonPort, m.solonPort, gatewayPort,
 				),
 			},
 			"Labels": map[string]string{
