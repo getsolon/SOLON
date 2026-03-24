@@ -102,6 +102,9 @@ export default function Chat() {
           },
           caps: ['tool_events'],
           scopes: ['operator.admin'],
+          auth: {
+            password: 'solon-internal',
+          },
         },
       }
       ws.send(JSON.stringify(connectFrame))

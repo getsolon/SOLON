@@ -612,7 +612,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"sh", "-c",
 				fmt.Sprintf(
 					"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
-						"openclaw gateway --port %d --bind lan --allow-unconfigured --auth none",
+						"openclaw gateway --port %d --bind lan --allow-unconfigured --auth password --password solon-internal",
 					gatewayPort,
 				),
 			},
