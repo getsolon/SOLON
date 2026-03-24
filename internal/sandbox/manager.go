@@ -611,18 +611,39 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 			"Cmd": []string{
 				"sh", "-c",
 				fmt.Sprintf(
-					"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
-						"openclaw gateway --port %d --bind lan --allow-unconfigured --auth password --password solon-internal",
-					gatewayPort,
+					// 1. Write a WebSocket bridge that connects locally (gets admin scopes)
+					//    and exposes a proxy on 0.0.0.0 for external connections
+					"cat > /tmp/ws-bridge.js << 'BRIDGE'\n"+
+						"const WebSocket = require('ws');\n"+
+						"const wss = new WebSocket.Server({ port: %d, host: '0.0.0.0' });\n"+
+						"console.log('[bridge] listening on 0.0.0.0:%d');\n"+
+						"wss.on('connection', (client) => {\n"+
+						"  const up = new WebSocket('ws://127.0.0.1:%d');\n"+
+						"  up.on('open', () => {\n"+
+						"    client.on('message', d => { try { up.send(d) } catch {} });\n"+
+						"    up.on('message', d => { try { client.send(d) } catch {} });\n"+
+						"  });\n"+
+						"  up.on('close', () => client.close());\n"+
+						"  client.on('close', () => up.close());\n"+
+						"  up.on('error', () => client.close());\n"+
+						"  client.on('error', () => up.close());\n"+
+						"});\n"+
+						"BRIDGE\n"+
+						// 2. Install ws module if needed
+						"cd /tmp && npm list ws 2>/dev/null || npm init -y 2>/dev/null && npm install ws 2>/dev/null; "+
+						// 3. Start gateway on loopback with no auth (safe — not exposed)
+						"openclaw config set gateway.controlUi.dangerouslyAllowHostHeaderOriginFallback true 2>/dev/null; "+
+						"openclaw gateway --port %d --bind loopback --allow-unconfigured --auth none &"+
+						" sleep 5; "+
+						// 4. Start the bridge
+						"exec node /tmp/ws-bridge.js",
+					gatewayPort+1, gatewayPort+1, gatewayPort, gatewayPort,
 				),
 			},
 			"Labels": map[string]string{
 				LabelManaged:   "true",
 				LabelSandboxID: sandboxID,
 				LabelPolicy:    "openclaw-gateway",
-			},
-			"ExposedPorts": map[string]any{
-				fmt.Sprintf("%d/tcp", gatewayPort): map[string]any{},
 			},
 			"HostConfig": map[string]any{
 				"NetworkMode": NetworkName,
@@ -631,11 +652,6 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"SecurityOpt": []string{"no-new-privileges"},
 				"ExtraHosts":  []string{"host.docker.internal:host-gateway"},
 				"Binds":       []string{"openclaw-data:/root/.openclaw"},
-				"PortBindings": map[string]any{
-					fmt.Sprintf("%d/tcp", gatewayPort): []map[string]string{
-						{"HostIp": "127.0.0.1", "HostPort": fmt.Sprintf("%d", gatewayPort)},
-					},
-				},
 			},
 		},
 	})

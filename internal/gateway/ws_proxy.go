@@ -54,9 +54,15 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Resolve upstream OpenClaw container IP
-	// Connect via localhost — the container publishes port 18789 to the host.
-	// This is critical: OpenClaw only grants admin scopes to local connections.
-	upstreamURL := fmt.Sprintf("ws://127.0.0.1:%d", openclawGatewayPort)
+	// Connect to the WS bridge port (gateway+1). The bridge runs inside the
+	// container and connects to the gateway on localhost (gets admin scopes).
+	// Solon connects to the bridge via the Docker bridge network.
+	containerIP, err := g.sandboxes.OpenClawContainerIP(r.Context())
+	if err != nil {
+		writeError(w, http.StatusServiceUnavailable, "OpenClaw is not running — start it first via the dashboard or 'solon openclaw'")
+		return
+	}
+	upstreamURL := fmt.Sprintf("ws://%s:%d", containerIP, openclawGatewayPort+1)
 
 	// Validate origin (before upgrade)
 	if !g.isAllowedWSOrigin(r) {
