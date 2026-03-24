@@ -611,6 +611,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 			"Cmd": []string{
 				"openclaw", "gateway",
 				"--port", fmt.Sprintf("%d", gatewayPort),
+				"--bind", "lan",
 				"--allow-unconfigured",
 				"--auth", "token",
 				"--token", "solon-openclaw-token",
