@@ -481,6 +481,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 				"CapAdd":      []string{"NET_BIND_SERVICE"},
 				"SecurityOpt": []string{"no-new-privileges"},
 				"ExtraHosts":  []string{"host.docker.internal:host-gateway"},
+				"Binds":       []string{"openclaw-data:/root/.openclaw"},
 			},
 		},
 	})
