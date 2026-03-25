@@ -73,6 +73,11 @@ func (g *Gateway) LocalhostOrAuth(next http.Handler) http.Handler {
 }
 
 func isLocalhost(r *http.Request) bool {
+	// If X-Forwarded-For is set, a reverse proxy (Caddy) forwarded this request
+	// from an external client — treat it as remote, not localhost.
+	if r.Header.Get("X-Forwarded-For") != "" {
+		return false
+	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		host = r.RemoteAddr
