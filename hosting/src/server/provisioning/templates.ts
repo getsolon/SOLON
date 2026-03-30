@@ -6,7 +6,7 @@ import type { Region } from "@/lib/types";
 
 // Path to the shared Terraform module for Hetzner instances
 const TF_MODULE_DIR =
-  process.env.TF_MODULE_DIR || "/var/lib/nemoclaw/terraform/modules/hetzner-instance";
+  process.env.TF_MODULE_DIR || "/var/lib/solon/terraform/modules/hetzner-instance";
 
 /**
  * Generate terraform.tfvars and a main.tf that references the shared module
@@ -59,7 +59,7 @@ variable "location" {
 
 variable "ssh_key_name" {
   type    = string
-  default = "nemoclaw-provisioner"
+  default = "solon-provisioner"
 }
 
 module "instance" {

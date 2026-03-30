@@ -90,7 +90,7 @@ async function createHetznerInstance(
   job: ProvisioningJob,
   instance: typeof instances.$inferSelect
 ): Promise<void> {
-  const workspaceDir = `/var/lib/nemoclaw/workspaces/${instance.id}`;
+  const workspaceDir = `/var/lib/solon/workspaces/${instance.id}`;
 
   await db
     .update(provisioningJobs)
@@ -158,7 +158,7 @@ async function deleteHetznerInstance(
   job: ProvisioningJob,
   instance: typeof instances.$inferSelect
 ): Promise<void> {
-  const workspaceDir = `/var/lib/nemoclaw/workspaces/${instance.id}`;
+  const workspaceDir = `/var/lib/solon/workspaces/${instance.id}`;
 
   await db
     .update(provisioningJobs)

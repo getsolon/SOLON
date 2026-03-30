@@ -47,9 +47,9 @@ export default function DashboardLayout({
       <aside className="fixed inset-y-0 left-0 w-64 bg-gray-900">
         <div className="flex h-16 items-center gap-2 px-6">
           <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">N</span>
+            <span className="text-white font-bold text-sm">S</span>
           </div>
-          <span className="text-lg font-semibold text-white">NemoClaw</span>
+          <span className="text-lg font-semibold text-white">Solon</span>
         </div>
 
         <nav className="mt-4 px-3 space-y-1">

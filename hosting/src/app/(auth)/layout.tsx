@@ -10,10 +10,10 @@ export default function AuthLayout({
       <div className="mb-8">
         <Link href="/" className="flex items-center gap-2">
           <div className="h-10 w-10 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold text-lg">N</span>
+            <span className="text-white font-bold text-lg">S</span>
           </div>
           <span className="text-2xl font-semibold text-gray-900">
-            NemoClaw
+            Solon
           </span>
         </Link>
       </div>

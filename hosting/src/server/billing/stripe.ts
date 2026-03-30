@@ -21,7 +21,7 @@ export async function createCustomer(
   return getStripe().customers.create({
     email,
     name,
-    metadata: { platform: "nemoclaw" },
+    metadata: { platform: "solon" },
   });
 }
 

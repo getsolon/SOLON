@@ -43,7 +43,7 @@ export default function RegisterPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Create an account</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Get started with NemoClaw managed hosting
+          Deploy your own AI agent server
         </p>
       </div>
 

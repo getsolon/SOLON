@@ -5,9 +5,9 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "NemoClaw - Managed Solon Hosting",
+  title: "Solon — Your Own AI Agent Server",
   description:
-    "Deploy and manage Solon AI inference instances with tenant isolation, security, and multi-tier inference.",
+    "Deploy AI agents on dedicated hardware. Bring your own API keys or run open-source models on NVIDIA GPUs. No DevOps required.",
 };
 
 export default function RootLayout({

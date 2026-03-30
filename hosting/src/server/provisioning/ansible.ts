@@ -9,7 +9,7 @@ const ANSIBLE_PLAYBOOK_BIN =
 
 // Directory containing Ansible playbooks
 const PLAYBOOKS_DIR =
-  process.env.ANSIBLE_PLAYBOOKS_DIR || "/var/lib/nemoclaw/ansible/playbooks";
+  process.env.ANSIBLE_PLAYBOOKS_DIR || "/var/lib/solon/ansible/playbooks";
 
 /**
  * Run an Ansible playbook with the given inventory file and extra variables.

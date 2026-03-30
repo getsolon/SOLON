@@ -12,31 +12,32 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@cloudflare/next-on-pages": "^1.13.16",
+    "@libsql/client": "^0.14.0",
+    "@tanstack/react-query": "^5.62.0",
+    "@trpc/client": "^11.0.0",
+    "@trpc/react-query": "^11.0.0",
+    "@trpc/server": "^11.0.0",
+    "better-auth": "^1.2.0",
+    "drizzle-orm": "^0.44.0",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "drizzle-orm": "^0.44.0",
-    "@libsql/client": "^0.14.0",
-    "@trpc/server": "^11.0.0",
-    "@trpc/client": "^11.0.0",
-    "@trpc/react-query": "^11.0.0",
-    "@tanstack/react-query": "^5.62.0",
-    "better-auth": "^1.2.0",
     "stripe": "^17.4.0",
-    "zod": "^3.24.0",
-    "superjson": "^2.2.2"
+    "superjson": "^2.2.2",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0",
+    "@tailwindcss/forms": "^0.5.9",
+    "@types/node": "^22.10.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@types/node": "^22.10.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
-    "@tailwindcss/forms": "^0.5.9",
     "drizzle-kit": "^0.31.4",
     "eslint": "^9.0.0",
-    "eslint-config-next": "^15.1.0"
+    "eslint-config-next": "^15.1.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.7.0"
   }
 }
