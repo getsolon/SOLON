@@ -1,0 +1,223 @@
+---
+const localModels = [
+  { name: 'Phi-3 Mini', creator: 'Microsoft', size: '2b', vram: 1.7, capabilities: ['chat', 'reasoning'] },
+  { name: 'Qwen 2.5', creator: 'Alibaba', size: '1.5b', vram: 1.3, capabilities: ['chat', 'code'] },
+  { name: 'DeepSeek R1', creator: 'DeepSeek', size: '1.5b', vram: 1.1, capabilities: ['reasoning'] },
+  { name: 'Llama 3.2', creator: 'Meta', size: '3b', vram: 2.0, capabilities: ['chat'] },
+  { name: 'Gemma 3', creator: 'Google', size: '4b', vram: 3.3, capabilities: ['chat', 'vision'] },
+  { name: 'Mistral', creator: 'Mistral AI', size: '7b', vram: 4.1, capabilities: ['chat'] },
+  { name: 'Llama 3.1', creator: 'Meta', size: '8b', vram: 4.7, capabilities: ['chat'] },
+  { name: 'Qwen 2.5', creator: 'Alibaba', size: '7b', vram: 4.7, capabilities: ['chat', 'code'] },
+  { name: 'DeepSeek R1', creator: 'DeepSeek', size: '7b', vram: 4.7, capabilities: ['reasoning'] },
+  { name: 'Gemma 3', creator: 'Google', size: '9b', vram: 5.5, capabilities: ['chat', 'vision'] },
+  { name: 'Phi-4', creator: 'Microsoft', size: '14b', vram: 9.1, capabilities: ['chat', 'code'] },
+  { name: 'DeepSeek R1', creator: 'DeepSeek', size: '14b', vram: 9.0, capabilities: ['reasoning'] },
+  { name: 'Gemma 3', creator: 'Google', size: '27b', vram: 17.2, capabilities: ['chat', 'vision'] },
+  { name: 'Qwen 2.5', creator: 'Alibaba', size: '32b', vram: 20.5, capabilities: ['chat', 'code'] },
+  { name: 'DeepSeek R1', creator: 'DeepSeek', size: '32b', vram: 20.0, capabilities: ['reasoning'] },
+]
+
+const cloudModels = [
+  { name: 'DeepSeek R1', creator: 'DeepSeek', size: '70b', vram: 43.0, capabilities: ['reasoning'] },
+  { name: 'Llama 3.1', creator: 'Meta', size: '70b', vram: 40.0, capabilities: ['chat'] },
+  { name: 'Command R+', creator: 'Cohere', size: '104b', vram: 60.0, capabilities: ['chat', 'rag'] },
+  { name: 'Llama 3.1', creator: 'Meta', size: '405b', vram: 230.0, capabilities: ['chat'] },
+]
+---
+
+<section class="max-w-5xl mx-auto px-6 py-20" id="models">
+  <div class="mb-12">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-light/10 dark:bg-brand-light/20 border border-brand-light/20 dark:border-brand-light/30 mb-4">
+      <span class="text-xs font-semibold text-brand-light tracking-wide uppercase">Models</span>
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight mb-3">Can I run this?</h2>
+    <p class="text-gray-500 dark:text-gray-400 max-w-xl">Open-source models, secured by Solon. See what runs on your hardware.</p>
+  </div>
+
+  <!-- Hardware detection banner -->
+  <div id="hw-banner" class="mb-8 rounded-xl border border-brand-light/20 bg-brand-light/5 dark:bg-brand-light/10 p-4 flex items-center justify-between hidden">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-brand-light/20 flex items-center justify-center">
+        <svg class="w-4 h-4 text-brand-light" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" />
+        </svg>
+      </div>
+      <div>
+        <span class="text-sm font-medium" id="hw-label">Detecting your hardware...</span>
+        <span class="text-xs text-gray-500 dark:text-gray-400 ml-2" id="hw-ram"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Local models -->
+  <div class="rounded-xl border border-gray-200 dark:border-white/[0.06] overflow-hidden mb-4">
+    <div class="px-4 py-3 bg-gray-50 dark:bg-white/[0.03] border-b border-gray-200 dark:border-white/[0.06] flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-green-500 text-sm">●</span>
+        <span class="text-sm font-semibold">Run on your machine</span>
+      </div>
+      <span class="text-xs text-gray-400 dark:text-gray-500">Free — install Solon and go</span>
+    </div>
+    <div class="divide-y divide-gray-100 dark:divide-white/[0.04]">
+      {localModels.map(m => (
+        <div class="model-row flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors" data-vram={m.vram}>
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="model-status w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/[0.06] text-xs">
+              ?
+            </span>
+            <div class="min-w-0">
+              <span class="text-sm font-medium">{m.name}</span>
+              <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">{m.size}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="hidden sm:flex items-center gap-1.5">
+              {m.capabilities.map(c => (
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/[0.06] text-gray-500 dark:text-gray-400 uppercase tracking-wide">{c}</span>
+              ))}
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono w-16 text-right">{m.vram} GB</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Install CTA -->
+  <div class="flex items-center justify-center py-4">
+    <div class="inline-flex items-center gap-3 bg-gray-50 dark:bg-white/[0.05] border border-gray-200 dark:border-white/[0.08] rounded-xl px-5 py-3 font-mono text-sm">
+      <code class="text-gray-800 dark:text-gray-200">curl -fsSL https://getsolon.dev/install.sh | sh</code>
+      <button
+        onclick="navigator.clipboard.writeText('curl -fsSL https://getsolon.dev/install.sh | sh')"
+        class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        title="Copy"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="9" y="9" width="13" height="13" rx="2" />
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="flex items-center gap-4 py-6">
+    <div class="flex-1 border-t border-gray-200 dark:border-white/[0.06]"></div>
+    <span class="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Too large for your machine?</span>
+    <div class="flex-1 border-t border-gray-200 dark:border-white/[0.06]"></div>
+  </div>
+
+  <!-- Cloud GPU models -->
+  <div class="rounded-xl border border-green-200 dark:border-green-500/20 overflow-hidden mb-4">
+    <div class="px-4 py-3 bg-green-50 dark:bg-green-500/[0.06] border-b border-green-200 dark:border-green-500/20 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-green-500 text-sm">☁</span>
+        <span class="text-sm font-semibold text-green-800 dark:text-green-300">Deploy on managed GPU</span>
+      </div>
+      <span class="text-xs text-green-600 dark:text-green-400">NVIDIA A100 / H100 / H200 in Europe</span>
+    </div>
+    <div class="divide-y divide-green-100 dark:divide-green-500/10">
+      {cloudModels.map(m => (
+        <div class="flex items-center justify-between px-4 py-3 hover:bg-green-50/50 dark:hover:bg-green-500/[0.03] transition-colors">
+          <div class="flex items-center gap-3 min-w-0">
+            <span class="w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-500/20 text-xs text-green-600 dark:text-green-400">☁</span>
+            <div class="min-w-0">
+              <span class="text-sm font-medium">{m.name}</span>
+              <span class="text-xs text-gray-400 dark:text-gray-500 ml-1.5">{m.size}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="hidden sm:flex items-center gap-1.5">
+              {m.capabilities.map(c => (
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-500/10 text-green-600 dark:text-green-400 uppercase tracking-wide">{c}</span>
+              ))}
+            </div>
+            <span class="text-xs text-gray-400 dark:text-gray-500 font-mono w-16 text-right">{m.vram} GB</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- GPU deploy CTA -->
+  <div class="flex items-center justify-center gap-3 pt-4">
+    <a href="https://app.getsolon.dev" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-semibold transition-colors">
+      Deploy on GPU — from $3.49/hr
+    </a>
+    <a href="/pricing" class="px-5 py-2.5 border border-gray-200 dark:border-white/[0.1] rounded-lg text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/[0.05] transition-colors">
+      View all plans
+    </a>
+  </div>
+</section>
+
+<script is:inline>
+  // Detect hardware and mark which models can run
+  (function() {
+    const ram = navigator.deviceMemory || 0; // GB, coarse (4, 8, 16, etc.)
+    const banner = document.getElementById('hw-banner');
+    const label = document.getElementById('hw-label');
+    const ramLabel = document.getElementById('hw-ram');
+    const rows = document.querySelectorAll('.model-row');
+
+    // Try to get GPU info via WebGL
+    let gpu = '';
+    try {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+      if (gl) {
+        const ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) gpu = gl.getParameter(ext.UNMASKED_RENDERER_WEBGL);
+      }
+    } catch(e) {}
+
+    // Estimate available VRAM
+    // deviceMemory gives system RAM (capped at 8 on some browsers)
+    // For Apple Silicon: unified memory, ~75% usable for inference
+    // For discrete GPU: we can't reliably detect VRAM from browser
+    let availableGB = 0;
+    let hwName = '';
+
+    if (gpu.includes('Apple')) {
+      // Apple Silicon — unified memory
+      // deviceMemory is capped at 8 in some browsers, but if we see Apple GPU
+      // we know it's at least 8GB. Use deviceMemory as floor.
+      const appleRam = Math.max(ram, 8);
+      availableGB = appleRam * 0.75; // ~75% usable
+      hwName = gpu.replace('Apple ', '');
+    } else if (ram > 0) {
+      // Generic — assume CPU inference, ~80% of system RAM usable
+      availableGB = ram * 0.8;
+      hwName = gpu || 'your machine';
+    }
+
+    if (ram > 0 || gpu) {
+      banner.classList.remove('hidden');
+      if (hwName) {
+        label.textContent = hwName;
+        ramLabel.textContent = ram ? `${ram} GB RAM detected` : '';
+      } else {
+        label.textContent = 'Hardware detected';
+        ramLabel.textContent = ram ? `${ram} GB RAM` : '';
+      }
+    }
+
+    rows.forEach(row => {
+      const vram = parseFloat(row.dataset.vram);
+      const status = row.querySelector('.model-status');
+
+      if (availableGB <= 0) {
+        // Can't detect — show neutral
+        status.textContent = '—';
+        status.className = 'model-status w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-gray-100 dark:bg-white/[0.06] text-[10px] text-gray-400';
+      } else if (vram <= availableGB) {
+        // Can run
+        status.textContent = '✓';
+        status.className = 'model-status w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-green-100 dark:bg-green-500/20 text-[10px] text-green-600 dark:text-green-400 font-bold';
+      } else {
+        // Too large
+        status.textContent = '✗';
+        status.className = 'model-status w-5 h-5 flex-shrink-0 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-500/20 text-[10px] text-red-500 dark:text-red-400';
+      }
+    });
+  })();
+</script>
