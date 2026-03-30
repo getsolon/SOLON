@@ -78,7 +78,7 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 		log.Printf("[ws-proxy] accept error: %v", err)
 		return
 	}
-	defer browserConn.CloseNow()
+	defer func() { _ = browserConn.CloseNow() }()
 	browserConn.SetReadLimit(wsReadLimit)
 
 	activeWSConns.Add(1)
@@ -91,10 +91,10 @@ func (g *Gateway) handleOpenClawWS(w http.ResponseWriter, r *http.Request) {
 	upstreamConn, _, err := websocket.Dial(ctx, upstreamURL, nil)
 	if err != nil {
 		log.Printf("[ws-proxy] upstream dial error: %v", err)
-		browserConn.Close(websocket.StatusBadGateway, "failed to connect to OpenClaw gateway")
+		_ = browserConn.Close(websocket.StatusBadGateway, "failed to connect to OpenClaw gateway")
 		return
 	}
-	defer upstreamConn.CloseNow()
+	defer func() { _ = upstreamConn.CloseNow() }()
 	upstreamConn.SetReadLimit(wsReadLimit)
 
 	log.Printf("[ws-proxy] connected: browser <-> %s", upstreamURL)
@@ -131,8 +131,8 @@ func proxyWebSocket(ctx context.Context, cancel context.CancelFunc, browser, ups
 	wg.Wait()
 
 	// Close both connections gracefully
-	browser.Close(websocket.StatusNormalClosure, "proxy closed")
-	upstream.Close(websocket.StatusNormalClosure, "proxy closed")
+	_ = browser.Close(websocket.StatusNormalClosure, "proxy closed")
+	_ = upstream.Close(websocket.StatusNormalClosure, "proxy closed")
 }
 
 // pipeWS copies messages from src to dst until error or context cancellation.
