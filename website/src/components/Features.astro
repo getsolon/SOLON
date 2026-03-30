@@ -1,46 +1,103 @@
 ---
-const features = [
+const agents = [
   {
-    title: 'Agents, Not Chat',
-    description: 'Deploy autonomous agents with tools, skills, and MCP server connections. They research, write, analyze, and execute — not just respond.',
-    icon: '🤖',
-  },
-  {
-    title: 'Your Model or Theirs',
-    description: 'Bring your own API key (Anthropic, OpenAI) or run open-source models locally on dedicated NVIDIA A100, H100, and H200 GPUs.',
-    icon: '⚡',
+    title: 'Autonomous Agents',
+    description: 'Deploy agents with tools, skills, and MCP server connections. They research, write, analyze, and execute tasks on their own — not just respond to prompts.',
   },
   {
     title: 'Channel Integrations',
-    description: 'Connect agents to WhatsApp, Telegram, Slack, and Discord from the dashboard. No code needed.',
-    icon: '💬',
+    description: 'Connect agents to WhatsApp, Telegram, Slack, and Discord from the dashboard. Your agents meet your users where they already are.',
   },
+  {
+    title: 'Tiered Security',
+    description: 'Control what each agent can do. Tier 1: inference only. Tier 2: tools and internet. Tier 3: persistent storage. Tier 4: full capabilities with MCP and custom skills.',
+  },
+]
+
+const models = [
+  {
+    title: 'Bring Your Own Keys',
+    description: 'Use your existing Anthropic, OpenAI, or NVIDIA API keys. Solon proxies requests with auth, rate limiting, and usage tracking — one API for all your providers.',
+  },
+  {
+    title: 'Run Open-Source Models',
+    description: 'Pull and run Llama, Gemma, Qwen, Mistral, and more on dedicated NVIDIA GPUs. Or run locally on your Mac with llama.cpp and Metal acceleration.',
+  },
+  {
+    title: 'OpenAI-Compatible API',
+    description: 'Drop-in replacement for the OpenAI API. Any tool, SDK, or framework that works with OpenAI works with Solon. Zero code changes.',
+  },
+]
+
+const infra = [
   {
     title: 'Dedicated Hardware',
-    description: 'Every instance runs on its own server. No shared compute, no noisy neighbors. Full tenant isolation with automatic TLS.',
-    icon: '🔒',
+    description: 'Every managed instance runs on its own server. No shared compute, no noisy neighbors. Full tenant isolation with automatic TLS.',
   },
   {
-    title: 'Web Dashboard',
-    description: 'Manage agents, configure providers, monitor usage, and deploy models — all from a browser. No SSH or Linux knowledge needed.',
-    icon: '📊',
+    title: 'Mandatory Auth',
+    description: 'Every request requires an API key. Keys are bcrypt-hashed, never stored in plaintext. There is no --no-auth flag. Security is the default, not an option.',
   },
   {
-    title: 'Open Source Core',
-    description: 'Solon is MIT-licensed. Run it yourself for free, or let us manage it so you can focus on building with AI.',
-    icon: '🌐',
+    title: 'Open Source',
+    description: 'Solon is MIT-licensed. Run it yourself for free forever, or let us manage the infrastructure so you can focus on building.',
   },
 ]
 ---
 
-<section class="max-w-6xl mx-auto px-6 py-20">
-  <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">Everything you need to run AI agents</h2>
-  <p class="text-gray-500 dark:text-gray-400 text-center mb-16 max-w-xl mx-auto">From BYOK API access to dedicated GPU inference. Deploy in minutes, not months.</p>
+<!-- Agents -->
+<section class="max-w-6xl mx-auto px-6 pt-20 pb-10">
+  <div class="mb-12">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-light/10 dark:bg-brand-light/20 border border-brand-light/20 dark:border-brand-light/30 mb-4">
+      <span class="text-xs font-semibold text-brand-light tracking-wide uppercase">Agents</span>
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight mb-3">Agents that do real work</h2>
+    <p class="text-gray-500 dark:text-gray-400 max-w-xl">Not another chatbot. Solon agents run autonomously — connected to your tools, your channels, and your data.</p>
+  </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-    {features.map(f => (
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {agents.map(f => (
       <div class="p-6 rounded-xl border border-gray-100 dark:border-white/[0.06] hover:border-gray-200 dark:hover:border-white/[0.12] transition-colors bg-white dark:bg-white/[0.02]">
-        <div class="text-2xl mb-3">{f.icon}</div>
+        <h3 class="text-lg font-semibold mb-2">{f.title}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{f.description}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+<!-- Models -->
+<section class="max-w-6xl mx-auto px-6 py-10">
+  <div class="mb-12">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] mb-4">
+      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wide uppercase">Models</span>
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight mb-3">Your models. Your API keys.</h2>
+    <p class="text-gray-500 dark:text-gray-400 max-w-xl">Use any model from any provider — or run your own. One unified API with auth, rate limiting, and analytics built in.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {models.map(f => (
+      <div class="p-6 rounded-xl border border-gray-100 dark:border-white/[0.06] hover:border-gray-200 dark:hover:border-white/[0.12] transition-colors bg-white dark:bg-white/[0.02]">
+        <h3 class="text-lg font-semibold mb-2">{f.title}</h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{f.description}</p>
+      </div>
+    ))}
+  </div>
+</section>
+
+<!-- Infrastructure -->
+<section class="max-w-6xl mx-auto px-6 pt-10 pb-20">
+  <div class="mb-12">
+    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-100 dark:bg-white/[0.06] border border-gray-200 dark:border-white/[0.08] mb-4">
+      <span class="text-xs font-semibold text-gray-600 dark:text-gray-400 tracking-wide uppercase">Infrastructure</span>
+    </div>
+    <h2 class="text-3xl font-bold tracking-tight mb-3">Your server. Your data.</h2>
+    <p class="text-gray-500 dark:text-gray-400 max-w-xl">Dedicated hardware, mandatory security, and full data sovereignty. We manage the server — you own everything on it.</p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {infra.map(f => (
+      <div class="p-6 rounded-xl border border-gray-100 dark:border-white/[0.06] hover:border-gray-200 dark:hover:border-white/[0.12] transition-colors bg-white dark:bg-white/[0.02]">
         <h3 class="text-lg font-semibold mb-2">{f.title}</h3>
         <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{f.description}</p>
       </div>
