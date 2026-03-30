@@ -22,10 +22,14 @@ export type ProvisioningJobStatus =
 
 export type Region = "eu-central" | "eu-west" | "eu-north" | "eu-north-2" | "us-east";
 
+export type BillingModel = "monthly" | "hourly";
+
 export interface TierDefinition {
   id: Tier;
   name: string;
+  /** Price in cents. For monthly tiers: per month. For hourly tiers: per hour. */
   price: number;
+  billing: BillingModel;
   provider: Provider;
   serverType: string;
   description: string;

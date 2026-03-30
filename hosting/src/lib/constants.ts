@@ -4,7 +4,8 @@ export const TIERS: Record<string, TierDefinition> = {
   starter: {
     id: "starter",
     name: "Starter",
-    price: 2500, // cents
+    price: 2500, // cents/month
+    billing: "monthly",
     provider: "hetzner",
     serverType: "cx22",
     description: "Development and small workloads",
@@ -24,7 +25,8 @@ export const TIERS: Record<string, TierDefinition> = {
   pro: {
     id: "pro",
     name: "Pro",
-    price: 4900, // cents
+    price: 4900, // cents/month
+    billing: "monthly",
     provider: "hetzner",
     serverType: "cx42",
     description: "Production workloads with higher throughput",
@@ -45,8 +47,9 @@ export const TIERS: Record<string, TierDefinition> = {
   },
   gpu: {
     id: "gpu",
-    name: "GPU",
-    price: 29900, // cents
+    name: "GPU L4",
+    price: 29900, // cents/month
+    billing: "monthly",
     provider: "hetzner",
     serverType: "gx11",
     description: "Dedicated GPU for local inference with NVIDIA L4",
@@ -70,7 +73,8 @@ export const TIERS: Record<string, TierDefinition> = {
   "gpu-a100": {
     id: "gpu-a100",
     name: "GPU A100",
-    price: 119900, // cents — ~$1,199/mo
+    price: 349, // cents/hour — ~$2,549/mo at 100% uptime
+    billing: "hourly",
     provider: "datacrunch",
     serverType: "1A100.10V",
     description: "NVIDIA A100 80GB — run large open-source models locally",
@@ -94,7 +98,8 @@ export const TIERS: Record<string, TierDefinition> = {
   "gpu-h100": {
     id: "gpu-h100",
     name: "GPU H100",
-    price: 179900, // cents — ~$1,799/mo
+    price: 549, // cents/hour — ~$3,999/mo at 100% uptime
+    billing: "hourly",
     provider: "datacrunch",
     serverType: "1H100.20V",
     description: "NVIDIA H100 80GB — fastest inference for demanding workloads",
@@ -118,7 +123,8 @@ export const TIERS: Record<string, TierDefinition> = {
   "gpu-h200": {
     id: "gpu-h200",
     name: "GPU H200",
-    price: 249900, // cents — ~$2,499/mo
+    price: 689, // cents/hour — ~$4,999/mo at 100% uptime
+    billing: "hourly",
     provider: "datacrunch",
     serverType: "1H200.20V",
     description: "NVIDIA H200 141GB — maximum VRAM for the largest models",
