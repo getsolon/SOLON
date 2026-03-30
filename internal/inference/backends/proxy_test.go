@@ -141,7 +141,7 @@ func TestProxyBackend_StreamOpenAI(t *testing.T) {
 					{"delta": map[string]string{"content": c}},
 				},
 			})
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}
 
@@ -153,8 +153,8 @@ func TestProxyBackend_StreamOpenAI(t *testing.T) {
 				{"delta": map[string]string{}, "finish_reason": "stop"},
 			},
 		})
-		fmt.Fprintf(w, "data: %s\n\n", data)
-		fmt.Fprint(w, "data: [DONE]\n\n")
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
+		_, _ = fmt.Fprint(w, "data: [DONE]\n\n")
 		flusher.Flush()
 	}))
 	defer server.Close()
@@ -194,7 +194,7 @@ func TestProxyBackend_StreamAnthropic(t *testing.T) {
 
 		for _, e := range events {
 			data, _ := json.Marshal(e)
-			fmt.Fprintf(w, "data: %s\n\n", data)
+			_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 			flusher.Flush()
 		}
 	}))

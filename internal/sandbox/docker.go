@@ -290,16 +290,6 @@ func (d *dockerClient) networkGateway(ctx context.Context, name string) string {
 	return ""
 }
 
-// networkExists checks if a Docker network exists.
-func (d *dockerClient) networkExists(ctx context.Context, name string) bool {
-	resp, err := d.do(ctx, "GET", "/networks/"+name, nil)
-	if err != nil {
-		return false
-	}
-	_ = resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
-}
-
 // containerExec runs a command inside a container and returns the output.
 func (d *dockerClient) containerExec(ctx context.Context, id string, cmd []string, env []string) (string, error) {
 	// Step 1: Create exec instance

@@ -126,7 +126,7 @@ func DoUpdate(currentVersion string) error {
 	if err != nil {
 		return fmt.Errorf("creating temp dir: %w", err)
 	}
-	defer os.RemoveAll(tmpDir)
+	defer func() { _ = os.RemoveAll(tmpDir) }()
 
 	tmpBinary := filepath.Join(tmpDir, "solon")
 
@@ -193,7 +193,7 @@ func fetchLatestRelease() (*Release, error) {
 	if err != nil {
 		return nil, fmt.Errorf("contacting GitHub: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("GitHub API returned %d", resp.StatusCode)
@@ -216,7 +216,7 @@ func downloadFile(dst, url string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("HTTP %d", resp.StatusCode)
@@ -226,7 +226,7 @@ func downloadFile(dst, url string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	_, err = io.Copy(f, resp.Body)
 	return err
@@ -257,7 +257,7 @@ func verifyChecksum(binaryPath, checksumsPath, binaryName string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, f); err != nil {
@@ -277,13 +277,13 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
+	defer func() { _ = in.Close() }()
 
 	out, err := os.Create(dst)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func() { _ = out.Close() }()
 
 	if _, err := io.Copy(out, in); err != nil {
 		return err

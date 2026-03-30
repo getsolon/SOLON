@@ -173,7 +173,7 @@ func (p *ProxyBackend) completeAnthropic(ctx context.Context, prov *Provider, mo
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("Anthropic returned %d: %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("anthropic returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var anthropicResp anthropicResponse
@@ -225,7 +225,7 @@ func (p *ProxyBackend) streamAnthropic(ctx context.Context, prov *Provider, mode
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
-		return nil, fmt.Errorf("Anthropic returned %d: %s", resp.StatusCode, string(respBody))
+		return nil, fmt.Errorf("anthropic returned %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	ch := make(chan CompletionChunk, 16)

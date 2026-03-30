@@ -774,7 +774,7 @@ func openclawCmd() *cobra.Command {
 			// Check Docker
 			mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
 			if !mgr.Available(cmd.Context()) {
-				return fmt.Errorf("Docker is not running — OpenClaw requires Docker for sandboxing")
+				return fmt.Errorf("docker is not running — OpenClaw requires Docker for sandboxing")
 			}
 
 			// Get provider key (prefer anthropic, fall back to first available)
@@ -925,7 +925,7 @@ func sandboxesCmd() *cobra.Command {
 
 			mgr := sandbox.NewManager("/var/run/docker.sock", db, 8420)
 			if !mgr.Available(cmd.Context()) {
-				return fmt.Errorf("Docker is not running — sandboxes require Docker")
+				return fmt.Errorf("docker is not running — sandboxes require Docker")
 			}
 
 			req := sandbox.CreateRequest{

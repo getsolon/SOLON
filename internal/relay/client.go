@@ -109,7 +109,7 @@ func (c *Client) connect(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("connecting to relay: %w", err)
 	}
-	defer conn.CloseNow()
+	defer func() { _ = conn.CloseNow() }()
 
 	// Send init message
 	init := InitMsg{
