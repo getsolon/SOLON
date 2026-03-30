@@ -3,6 +3,7 @@ import { eq, and, ne } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure } from "../trpc";
 import { instances, provisioningJobs } from "@/server/db/schema";
+import { TIERS, REGIONS } from "@/lib/constants";
 
 export const instancesRouter = router({
   list: protectedProcedure.query(async ({ ctx }) => {
@@ -44,17 +45,35 @@ export const instancesRouter = router({
           .min(3)
           .max(63)
           .regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
-        tier: z.enum(["starter", "pro", "gpu"]),
-        region: z.enum(["eu-central", "eu-west", "us-east"]),
+        tier: z.enum(["starter", "pro", "gpu", "gpu-a100", "gpu-h100", "gpu-h200"]),
+        region: z.enum(["eu-central", "eu-west", "eu-north", "eu-north-2", "us-east"]),
         apiKey: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Cloud tiers require an API key
-      if (input.tier !== "gpu" && !input.apiKey) {
+      const tier = TIERS[input.tier];
+      const region = REGIONS[input.region];
+
+      if (!tier || !region) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "An NVIDIA API key is required for Starter and Pro tiers.",
+          message: "Invalid tier or region.",
+        });
+      }
+
+      // Validate that the region matches the tier's provider
+      if (tier.provider !== region.provider) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `${tier.name} instances are only available in ${tier.provider === "datacrunch" ? "EU North (Finland) and EU North 2 (Iceland)" : "EU Central, EU West, and US East"} regions.`,
+        });
+      }
+
+      // BYOK tiers (no local GPU) require an inference API key
+      if (!tier.hasGpu && !input.apiKey) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "An inference API key is required for Starter and Pro tiers.",
         });
       }
 
@@ -65,6 +84,7 @@ export const instancesRouter = router({
           userId: ctx.user.id,
           name: input.name,
           tier: input.tier,
+          provider: tier.provider,
           region: input.region,
           status: "pending",
         })

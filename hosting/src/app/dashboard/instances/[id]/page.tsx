@@ -11,7 +11,8 @@ const instance = {
   status: "running" as const,
   ipv4: "65.108.42.115",
   region: "eu-central",
-  hetznerServerId: "48291573",
+  provider: "hetzner" as const,
+  providerServerId: "48291573",
   createdAt: "2026-03-15T10:30:00Z",
 };
 
@@ -173,9 +174,13 @@ export default function InstanceDetailPage() {
                 <dd className="text-sm text-gray-900">{instance.region}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-sm text-gray-500">Hetzner Server</dt>
+                <dt className="text-sm text-gray-500">Provider</dt>
+                <dd className="text-sm text-gray-900 capitalize">{instance.provider}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-sm text-gray-500">Server ID</dt>
                 <dd className="text-sm font-mono text-gray-900">
-                  {instance.hetznerServerId}
+                  {instance.providerServerId}
                 </dd>
               </div>
               <div className="flex justify-between">

@@ -22,13 +22,18 @@ export const instances = sqliteTable("instances", {
     .notNull()
     .references(() => users.id),
   name: text("name").notNull(),
-  tier: text("tier", { enum: ["starter", "pro", "gpu"] }).notNull(),
+  tier: text("tier", {
+    enum: ["starter", "pro", "gpu", "gpu-a100", "gpu-h100", "gpu-h200"],
+  }).notNull(),
+  provider: text("provider", { enum: ["hetzner", "datacrunch"] })
+    .notNull()
+    .default("hetzner"),
   status: text("status", {
-    enum: ["pending", "provisioning", "running", "stopped", "failed", "deleted"],
+    enum: ["pending", "provisioning", "configuring", "running", "stopped", "failed", "deleted"],
   })
     .notNull()
     .default("pending"),
-  hetznerServerId: text("hetzner_server_id"),
+  providerServerId: text("provider_server_id"),
   ipv4: text("ipv4"),
   region: text("region").notNull().default("eu-central"),
   createdAt: text("created_at")
@@ -62,8 +67,8 @@ export const provisioningJobs = sqliteTable("provisioning_jobs", {
   status: text("status", {
     enum: [
       "pending",
-      "terraform_running",
-      "ansible_running",
+      "creating_server",
+      "configuring_server",
       "completed",
       "failed",
     ],
