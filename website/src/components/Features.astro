@@ -1,41 +1,41 @@
 ---
 const features = [
   {
-    title: 'One-Command Install',
-    description: 'Single binary. No Docker, no Python, no dependency hell. Download and run.',
+    title: 'Agents, Not Chat',
+    description: 'Deploy autonomous agents with tools, skills, and MCP server connections. They research, write, analyze, and execute — not just respond.',
+    icon: '🤖',
+  },
+  {
+    title: 'Your Model or Theirs',
+    description: 'Bring your own API key (Anthropic, OpenAI) or run open-source models locally on dedicated NVIDIA A100, H100, and H200 GPUs.',
     icon: '⚡',
   },
   {
-    title: 'OpenAI-Compatible',
-    description: 'Drop-in replacement for the OpenAI API. Works with any existing SDK or client.',
-    icon: '🔌',
+    title: 'Channel Integrations',
+    description: 'Connect agents to WhatsApp, Telegram, Slack, and Discord from the dashboard. No code needed.',
+    icon: '💬',
   },
   {
-    title: 'Mandatory Auth',
-    description: 'API keys on every request. No --no-auth flag. bcrypt-hashed keys, rate limiting, audit logging.',
+    title: 'Dedicated Hardware',
+    description: 'Every instance runs on its own server. No shared compute, no noisy neighbors. Full tenant isolation with automatic TLS.',
     icon: '🔒',
   },
   {
-    title: 'Secure Tunnel',
-    description: 'Expose your API to the internet securely via Cloudflare Tunnel. No port forwarding needed.',
-    icon: '🌐',
-  },
-  {
     title: 'Web Dashboard',
-    description: 'Embedded dashboard for managing models, keys, and monitoring requests. Installable as PWA.',
+    description: 'Manage agents, configure providers, monitor usage, and deploy models — all from a browser. No SSH or Linux knowledge needed.',
     icon: '📊',
   },
   {
-    title: 'Model Management',
-    description: 'Pull, list, and remove models from the CLI. Supports GGUF models via llama.cpp and Ollama.',
-    icon: '🤖',
+    title: 'Open Source Core',
+    description: 'Solon is MIT-licensed. Run it yourself for free, or let us manage it so you can focus on building with AI.',
+    icon: '🌐',
   },
 ]
 ---
 
 <section class="max-w-6xl mx-auto px-6 py-20">
-  <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">Everything you need to self-host AI</h2>
-  <p class="text-gray-500 dark:text-gray-400 text-center mb-16 max-w-xl mx-auto">Security-first design. Production-ready defaults. Zero configuration.</p>
+  <h2 class="text-3xl font-bold text-center mb-4 tracking-tight">Everything you need to run AI agents</h2>
+  <p class="text-gray-500 dark:text-gray-400 text-center mb-16 max-w-xl mx-auto">From BYOK API access to dedicated GPU inference. Deploy in minutes, not months.</p>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
     {features.map(f => (

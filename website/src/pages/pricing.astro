@@ -3,95 +3,143 @@ import Base from '../layouts/Base.astro'
 import Navbar from '../components/Navbar.astro'
 import Footer from '../components/Footer.astro'
 
-const products = [
+const cpuTiers = [
   {
-    id: 'nemoclaw',
-    label: 'NemoClaw',
-    description: 'NVIDIA\'s AI agent framework — fully managed on dedicated hardware.',
-    tiers: [
-      {
-        name: 'Starter',
-        price: '$25',
-        description: 'Cloud inference, perfect for getting started',
-        server: 'CX33 — 4 vCPU, 8 GB RAM',
-        features: [
-          'Managed NemoClaw instance',
-          'NVIDIA Cloud inference',
-          '40 GB NVMe storage',
-          'Auto-TLS & firewall',
-          'SSH key access',
-          'Basic monitoring',
-        ],
-        cta: 'Deploy Starter',
-        highlighted: false,
-      },
-      {
-        name: 'Pro',
-        price: '$49',
-        description: 'More resources, faster responses',
-        server: 'CX43 — 8 vCPU, 16 GB RAM',
-        features: [
-          'Everything in Starter',
-          'Higher throughput',
-          '80 GB NVMe storage',
-          'Priority provisioning',
-          'Request logging & analytics',
-          'Email alerts',
-        ],
-        cta: 'Deploy Pro',
-        highlighted: true,
-      },
-      {
-        name: 'GPU',
-        price: '$299',
-        description: 'Dedicated GPU, fully local inference',
-        server: 'GEX44 — RTX 4000 Ada, 20 GB VRAM',
-        features: [
-          'Everything in Pro',
-          'Self-hosted vLLM + Nemotron',
-          'No cloud API dependency',
-          'Full data sovereignty',
-          '160 GB NVMe storage',
-          'Custom model deployment',
-        ],
-        cta: 'Deploy GPU',
-        highlighted: false,
-      },
+    name: 'Starter',
+    price: '$25',
+    unit: '/mo',
+    description: 'BYOK agents for development and small workloads',
+    server: '2 vCPU / 4 GB RAM / 40 GB NVMe',
+    features: [
+      'Bring your own API key (Anthropic, OpenAI, etc.)',
+      'Solon agent runtime pre-installed',
+      'Web dashboard',
+      'Tenant isolation + auto-TLS',
+      'Basic monitoring',
     ],
-    faqs: [
-      {
-        q: 'What is NemoClaw?',
-        a: 'NemoClaw is NVIDIA\'s AI agent framework. With Solon Managed, we provision a fully configured NemoClaw instance on dedicated Hetzner infrastructure — you connect and start using it immediately.',
-      },
-      {
-        q: 'What does "managed" mean?',
-        a: 'We handle server provisioning, security hardening, TLS, monitoring, and updates. You get SSH access and a running NemoClaw instance. Your server, your data — we just keep it running.',
-      },
-      {
-        q: 'Can I use my own NVIDIA API key?',
-        a: 'Yes. Starter and Pro tiers use NVIDIA Cloud inference — bring your own API key. GPU tier runs inference locally via vLLM, no cloud API needed.',
-      },
-      {
-        q: 'Is each instance isolated?',
-        a: 'Every customer gets a dedicated Hetzner server. No shared compute, no noisy neighbors. Full tenant isolation.',
-      },
-      {
-        q: 'What about the GPU tier\'s 20 GB VRAM?',
-        a: 'The RTX 4000 Ada handles lighter models well. For heavier workloads, the Starter/Pro tiers with NVIDIA Cloud inference will give better throughput. We\'re transparent about this.',
-      },
-      {
-        q: 'Can I switch tiers later?',
-        a: 'Yes. Upgrade or downgrade anytime. We\'ll migrate your instance to the new server type with minimal downtime.',
-      },
-    ],
-    footnote: 'All managed instances are provisioned on dedicated Hetzner servers in EU datacenters. Prices exclude VAT.',
+    cta: 'Deploy Starter',
+    highlighted: false,
   },
-  // Future products go here:
-  // { id: 'openclaw', label: 'OpenClaw', ... },
-  // { id: 'solon', label: 'Solon', ... },
+  {
+    name: 'Pro',
+    price: '$49',
+    unit: '/mo',
+    description: 'Production agents with higher throughput',
+    server: '4 vCPU / 16 GB RAM / 80 GB NVMe',
+    features: [
+      'Everything in Starter',
+      'Higher throughput + multi-model routing',
+      'Request logging + analytics',
+      'Priority provisioning',
+      'Email alerts',
+    ],
+    cta: 'Deploy Pro',
+    highlighted: true,
+  },
+  {
+    name: 'GPU L4',
+    price: '$299',
+    unit: '/mo',
+    description: 'Local inference with NVIDIA L4',
+    server: '8 vCPU / 32 GB RAM / 160 GB NVMe / NVIDIA L4 24 GB',
+    features: [
+      'Everything in Pro',
+      'Run open-source models locally',
+      'No cloud API dependency',
+      'Full data sovereignty',
+      'Custom model deployment',
+    ],
+    cta: 'Deploy GPU L4',
+    highlighted: false,
+  },
 ]
 
-const cloudTiers = [
+const gpuTiers = [
+  {
+    name: 'GPU A100',
+    price: '$3.49',
+    unit: '/hr',
+    estimate: '~$2,549/mo',
+    gpu: 'NVIDIA A100 80 GB SXM4',
+    server: '10 vCPU / 120 GB RAM / 200 GB NVMe',
+    description: 'Run Llama 70B, Mixtral, DeepSeek locally',
+    features: [
+      'Full Solon agent platform',
+      'Run any HuggingFace model',
+      'No API costs, no rate limits',
+      'Data never leaves your server',
+      'Finland or Iceland datacenter',
+    ],
+    cta: 'Deploy A100',
+  },
+  {
+    name: 'GPU H100',
+    price: '$5.49',
+    unit: '/hr',
+    estimate: '~$3,999/mo',
+    gpu: 'NVIDIA H100 80 GB SXM5',
+    server: '20 vCPU / 200 GB RAM / 400 GB NVMe',
+    description: 'Fastest inference for demanding workloads',
+    features: [
+      'Everything in A100 tier',
+      'Run any model at peak speed',
+      '2-3x faster than A100',
+      'Ideal for multi-agent workflows',
+      'Finland or Iceland datacenter',
+    ],
+    cta: 'Deploy H100',
+  },
+  {
+    name: 'GPU H200',
+    price: '$6.89',
+    unit: '/hr',
+    estimate: '~$4,999/mo',
+    gpu: 'NVIDIA H200 141 GB SXM5',
+    server: '20 vCPU / 200 GB RAM / 400 GB NVMe',
+    description: 'Maximum VRAM for the largest models',
+    features: [
+      'Everything in H100 tier',
+      '141 GB VRAM — run 400B+ models unquantized',
+      'Largest context windows',
+      'Fine-tuning capable',
+      'Finland or Iceland datacenter',
+    ],
+    cta: 'Deploy H200',
+  },
+]
+
+const faqs = [
+  {
+    q: 'What does "managed" mean?',
+    a: 'We handle server provisioning, security hardening, TLS, monitoring, and updates. You get a running Solon instance with a web dashboard. Your server, your data — we just keep it running.',
+  },
+  {
+    q: 'What\'s the difference between BYOK and GPU tiers?',
+    a: 'Starter and Pro tiers use your existing API keys (Anthropic, OpenAI, etc.) for inference — affordable and fast to start. GPU tiers run open-source models locally on dedicated NVIDIA hardware — no API costs, full data sovereignty.',
+  },
+  {
+    q: 'Where are the servers located?',
+    a: 'CPU tiers (Starter, Pro, GPU L4) run on Hetzner in Germany, Finland, or US East. GPU tiers (A100, H100, H200) run on dedicated NVIDIA hardware in Finland or Iceland.',
+  },
+  {
+    q: 'Is each instance isolated?',
+    a: 'Every customer gets a dedicated server. No shared compute, no noisy neighbors. Full tenant isolation with automatic TLS and firewall.',
+  },
+  {
+    q: 'Can I switch tiers later?',
+    a: 'Yes. Upgrade or downgrade anytime. We\'ll migrate your instance to the new server type with minimal downtime.',
+  },
+  {
+    q: 'How does GPU billing work?',
+    a: 'GPU tiers (A100, H100, H200) are billed per hour. You pay only while the instance is running. CPU tiers are billed monthly at a flat rate.',
+  },
+  {
+    q: 'Can I self-host instead?',
+    a: 'Absolutely. Solon is open source (MIT). Install it anywhere with one command. Managed hosting is for teams who\'d rather focus on building than managing infrastructure.',
+  },
+]
+
+const selfHostedTiers = [
   {
     name: 'Free',
     price: '$0',
@@ -110,130 +158,146 @@ const cloudTiers = [
 ]
 ---
 
-<Base title="Pricing — Solon" description="Managed AI hosting and Solon Cloud plans. Deploy AI infrastructure in minutes.">
+<Base title="Pricing — Solon" description="Managed AI agent hosting on dedicated hardware. From $25/mo for BYOK to dedicated NVIDIA H100 GPUs.">
   <Navbar current="/pricing" />
 
   <!-- Header -->
   <section class="max-w-6xl mx-auto px-6 pt-24 pb-12 text-center">
     <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.1] mb-4">
-      Managed AI infrastructure
+      Your own AI agent server
     </h1>
     <p class="text-lg text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-      Deploy fully managed AI on dedicated hardware. Or self-host with Solon Cloud.
+      Dedicated hardware. Pre-configured. Running in minutes.
     </p>
   </section>
 
-  <!-- Product Tabs -->
-  <section class="max-w-6xl mx-auto px-6 pb-6">
-    <div class="flex items-center gap-3 mb-2">
+  <!-- CPU Tiers -->
+  <section class="max-w-6xl mx-auto px-6 pb-8">
+    <div class="flex items-center gap-3 mb-8">
       <div class="px-3 py-1 rounded-full bg-brand-light/10 dark:bg-brand-light/20 border border-brand-light/20 dark:border-brand-light/30">
         <span class="text-xs font-semibold text-brand-light tracking-wide uppercase">Managed</span>
       </div>
+      <h2 class="text-2xl font-bold tracking-tight">Agent Hosting</h2>
     </div>
 
-    {products.length > 1 ? (
-      <div class="flex gap-1 p-1 bg-gray-100 dark:bg-white/[0.05] rounded-lg w-fit mb-10" id="product-tabs">
-        {products.map((product, i) => (
-          <button
-            data-tab={product.id}
-            class={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
-              i === 0
-                ? 'bg-white dark:bg-white/[0.1] text-gray-900 dark:text-white shadow-sm'
-                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {cpuTiers.map(tier => (
+        <div class={`relative rounded-2xl p-8 transition-all ${
+          tier.highlighted
+            ? 'bg-brand-light/[0.06] dark:bg-brand-light/[0.08] border-2 border-brand-light/40 shadow-lg shadow-brand-light/5'
+            : 'border border-gray-200 dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.14]'
+        }`}>
+          {tier.highlighted && (
+            <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+              <span class="bg-brand-light text-white text-xs font-semibold px-3 py-1 rounded-full">Most popular</span>
+            </div>
+          )}
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-1">{tier.name}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{tier.description}</p>
+          </div>
+          <div class="flex items-baseline gap-1 mb-2">
+            <span class="text-4xl font-extrabold tracking-tight">{tier.price}</span>
+            <span class="text-sm text-gray-400 dark:text-gray-500">{tier.unit}</span>
+          </div>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-6 font-mono">{tier.server}</p>
+
+          <ul class="space-y-3 mb-8">
+            {tier.features.map(f => (
+              <li class="flex items-start gap-2.5 text-sm">
+                <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-light" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span class="text-gray-700 dark:text-gray-300">{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          <a
+            href="https://app.getsolon.dev"
+            class={`block w-full text-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
+              tier.highlighted
+                ? 'bg-brand-light text-white hover:opacity-90'
+                : 'bg-gray-100 dark:bg-white/[0.06] text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/[0.1]'
             }`}
           >
-            {product.label}
-          </button>
-        ))}
-      </div>
-    ) : (
-      <h2 class="text-2xl font-bold tracking-tight mb-10">{products[0].label} Hosting</h2>
-    )}
+            {tier.cta}
+          </a>
+        </div>
+      ))}
+    </div>
   </section>
 
-  <!-- Product Panels -->
-  {products.map((product, i) => (
-    <div data-panel={product.id} class={i > 0 ? 'hidden' : ''}>
-      {/* Description */}
-      <section class="max-w-6xl mx-auto px-6 pb-4">
-        <p class="text-gray-500 dark:text-gray-400 max-w-xl">{product.description}</p>
-      </section>
-
-      {/* Pricing Cards */}
-      <section class="max-w-6xl mx-auto px-6 pb-16">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
-          {product.tiers.map(tier => (
-            <div class={`relative rounded-2xl p-8 transition-all ${
-              tier.highlighted
-                ? 'bg-brand-light/[0.06] dark:bg-brand-light/[0.08] border-2 border-brand-light/40 shadow-lg shadow-brand-light/5'
-                : 'border border-gray-200 dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.14]'
-            }`}>
-              {tier.highlighted && (
-                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span class="bg-brand-light text-white text-xs font-semibold px-3 py-1 rounded-full">Most popular</span>
-                </div>
-              )}
-              <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-1">{tier.name}</h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">{tier.description}</p>
-              </div>
-              <div class="flex items-baseline gap-1 mb-2">
-                <span class="text-4xl font-extrabold tracking-tight">{tier.price}</span>
-                <span class="text-sm text-gray-400 dark:text-gray-500">/mo</span>
-              </div>
-              <p class="text-xs text-gray-400 dark:text-gray-500 mb-6 font-mono">{tier.server}</p>
-
-              <ul class="space-y-3 mb-8">
-                {tier.features.map(f => (
-                  <li class="flex items-start gap-2.5 text-sm">
-                    <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-brand-light" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    <span class="text-gray-700 dark:text-gray-300">{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href="https://app.getsolon.dev"
-                class={`block w-full text-center rounded-lg px-4 py-2.5 text-sm font-semibold transition-all ${
-                  tier.highlighted
-                    ? 'bg-brand-light text-white hover:opacity-90'
-                    : 'bg-gray-100 dark:bg-white/[0.06] text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/[0.1]'
-                }`}
-              >
-                {tier.cta}
-              </a>
-            </div>
-          ))}
-        </div>
-
-        {product.footnote && (
-          <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">{product.footnote}</p>
-        )}
-      </section>
-
-      {/* FAQ */}
-      {product.faqs && product.faqs.length > 0 && (
-        <section class="max-w-3xl mx-auto px-6 pb-16">
-          <h3 class="text-lg font-semibold mb-6">{product.label} FAQ</h3>
-          <div class="space-y-0 divide-y divide-gray-100 dark:divide-white/[0.06]">
-            {product.faqs.map(faq => (
-              <details class="group py-5">
-                <summary class="flex items-center justify-between cursor-pointer list-none">
-                  <span class="text-sm font-medium pr-4">{faq.q}</span>
-                  <svg class="w-4 h-4 flex-shrink-0 text-gray-400 group-open:rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                  </svg>
-                </summary>
-                <p class="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{faq.a}</p>
-              </details>
-            ))}
-          </div>
-        </section>
-      )}
+  <!-- GPU Tiers -->
+  <section class="max-w-6xl mx-auto px-6 py-16">
+    <div class="flex items-center gap-3 mb-3">
+      <div class="px-3 py-1 rounded-full bg-green-500/10 dark:bg-green-500/20 border border-green-500/20 dark:border-green-500/30">
+        <span class="text-xs font-semibold text-green-600 dark:text-green-400 tracking-wide uppercase">Dedicated GPU</span>
+      </div>
+      <h2 class="text-2xl font-bold tracking-tight">Run Your Own Models</h2>
     </div>
-  ))}
+    <p class="text-gray-500 dark:text-gray-400 mb-10 max-w-xl">
+      NVIDIA GPUs in European datacenters. Run any open-source model. Your data never leaves your server.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {gpuTiers.map(tier => (
+        <div class="rounded-2xl border border-gray-200 dark:border-white/[0.08] hover:border-gray-300 dark:hover:border-white/[0.14] p-8 transition-all">
+          <div class="mb-6">
+            <h3 class="text-lg font-semibold mb-1">{tier.name}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">{tier.description}</p>
+          </div>
+          <div class="flex items-baseline gap-1 mb-1">
+            <span class="text-4xl font-extrabold tracking-tight">{tier.price}</span>
+            <span class="text-sm text-gray-400 dark:text-gray-500">{tier.unit}</span>
+          </div>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">{tier.estimate}</p>
+          <p class="text-xs text-green-600 dark:text-green-400 font-medium mb-2">{tier.gpu}</p>
+          <p class="text-xs text-gray-400 dark:text-gray-500 mb-6 font-mono">{tier.server}</p>
+
+          <ul class="space-y-3 mb-8">
+            {tier.features.map(f => (
+              <li class="flex items-start gap-2.5 text-sm">
+                <svg class="w-4 h-4 mt-0.5 flex-shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+                <span class="text-gray-700 dark:text-gray-300">{f}</span>
+              </li>
+            ))}
+          </ul>
+
+          <a
+            href="https://app.getsolon.dev"
+            class="block w-full text-center rounded-lg px-4 py-2.5 text-sm font-semibold bg-gray-100 dark:bg-white/[0.06] text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/[0.1] transition-all"
+          >
+            {tier.cta}
+          </a>
+        </div>
+      ))}
+    </div>
+
+    <p class="text-center text-xs text-gray-400 dark:text-gray-500 mt-6">
+      GPU tiers billed per hour. All instances on dedicated hardware in EU datacenters. Prices exclude VAT.
+    </p>
+  </section>
+
+  <!-- FAQ -->
+  <section class="max-w-3xl mx-auto px-6 pb-16">
+    <h3 class="text-lg font-semibold mb-6">FAQ</h3>
+    <div class="space-y-0 divide-y divide-gray-100 dark:divide-white/[0.06]">
+      {faqs.map(faq => (
+        <details class="group py-5">
+          <summary class="flex items-center justify-between cursor-pointer list-none">
+            <span class="text-sm font-medium pr-4">{faq.q}</span>
+            <svg class="w-4 h-4 flex-shrink-0 text-gray-400 group-open:rotate-45 transition-transform" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+          </summary>
+          <p class="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">{faq.a}</p>
+        </details>
+      ))}
+    </div>
+  </section>
 
   <!-- Divider -->
   <div class="max-w-6xl mx-auto px-6">
@@ -253,7 +317,7 @@ const cloudTiers = [
     </p>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {cloudTiers.map(tier => (
+      {selfHostedTiers.map(tier => (
         <div class="rounded-xl border border-gray-200 dark:border-white/[0.08] p-6 hover:border-gray-300 dark:hover:border-white/[0.14] transition-colors">
           <div class="flex items-baseline justify-between mb-4">
             <h3 class="text-lg font-semibold">{tier.name}</h3>
@@ -279,7 +343,7 @@ const cloudTiers = [
   <section class="max-w-4xl mx-auto px-6 pb-24">
     <div class="bg-brand dark:bg-brand-light/10 dark:border dark:border-brand-light/20 rounded-2xl p-12 text-center text-white">
       <h2 class="text-3xl font-bold mb-4">Ready to deploy?</h2>
-      <p class="text-gray-300 dark:text-gray-400 mb-8 max-w-lg mx-auto">Get a managed instance running in minutes. No infrastructure experience needed.</p>
+      <p class="text-gray-300 dark:text-gray-400 mb-8 max-w-lg mx-auto">Get a managed AI agent instance running in minutes. No infrastructure experience needed.</p>
       <div class="flex gap-3 justify-center">
         <a href="https://app.getsolon.dev" class="px-6 py-2.5 bg-white text-brand rounded-lg text-sm font-semibold hover:bg-gray-100 transition-colors">
           Create Account
@@ -293,29 +357,3 @@ const cloudTiers = [
 
   <Footer />
 </Base>
-
-<script is:inline>
-  // Product tab switching
-  document.addEventListener('DOMContentLoaded', () => {
-    const tabs = document.querySelectorAll('#product-tabs button[data-tab]')
-    const panels = document.querySelectorAll('[data-panel]')
-
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const target = tab.getAttribute('data-tab')
-
-        // Update tab styles
-        tabs.forEach(t => {
-          t.className = t.getAttribute('data-tab') === target
-            ? 'px-4 py-2 rounded-md text-sm font-medium transition-all bg-white dark:bg-white/[0.1] text-gray-900 dark:text-white shadow-sm'
-            : 'px-4 py-2 rounded-md text-sm font-medium transition-all text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-        })
-
-        // Show/hide panels
-        panels.forEach(p => {
-          p.classList.toggle('hidden', p.getAttribute('data-panel') !== target)
-        })
-      })
-    })
-  })
-</script>
