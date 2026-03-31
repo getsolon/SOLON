@@ -140,16 +140,6 @@ async function handleOAuthCallback(
         .run()
       user = (await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(user.id).first<UserRow>())!
     } else {
-      // Beta allowlist — only permit specific GitHub users to sign up
-      // TODO: remove when ready for open signups
-      const ALLOWED_GITHUB_IDS = ['262115430', '47386942']
-      if (provider === 'github' && !ALLOWED_GITHUB_IDS.includes(profile.id)) {
-        throw forbidden('Signups are currently limited to beta testers')
-      }
-      if (provider === 'google') {
-        throw forbidden('Signups are currently limited to beta testers')
-      }
-
       // Create new user
       const id = userId()
       const role = determineRole(provider, profile, env)
