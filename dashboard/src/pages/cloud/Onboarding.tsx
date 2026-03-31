@@ -39,7 +39,7 @@ export default function Onboarding() {
               onClick={() => setPath('models')}
               className="text-left p-6 rounded-xl border border-[var(--border)] hover:border-brand-light/40 bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 transition-colors"
             >
-              <div className="text-2xl mb-3">💬</div>
+              <svg className="mb-3" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
               <h3 className="font-semibold text-[var(--text)] mb-1">Use AI Models</h3>
               <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">
                 Proxy Claude, GPT, or run open-source models through one API.
@@ -50,7 +50,7 @@ export default function Onboarding() {
               onClick={() => setPath('agent')}
               className="text-left p-6 rounded-xl border border-[var(--border)] hover:border-brand-light/40 bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 transition-colors"
             >
-              <div className="text-2xl mb-3">🤖</div>
+              <svg className="mb-3" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7h1a1 1 0 011 1v3a1 1 0 01-1 1h-1.27A7 7 0 015.27 19H4a1 1 0 01-1-1v-3a1 1 0 011-1h1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2z" /><circle cx="9" cy="13" r="1" fill="currentColor" /><circle cx="15" cy="13" r="1" fill="currentColor" /></svg>
               <h3 className="font-semibold text-[var(--text)] mb-1">Deploy an Agent</h3>
               <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">
                 Autonomous agents with tools, sandboxes, and channel integrations.
@@ -61,7 +61,7 @@ export default function Onboarding() {
               onClick={() => setPath('selfhost')}
               className="text-left p-6 rounded-xl border border-[var(--border)] hover:border-brand-light/40 bg-[var(--bg-secondary)] hover:bg-[var(--bg-secondary)]/80 transition-colors"
             >
-              <div className="text-2xl mb-3">🖥️</div>
+              <svg className="mb-3" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
               <h3 className="font-semibold text-[var(--text)] mb-1">Self-Host</h3>
               <p className="text-sm text-[var(--text-tertiary)] leading-relaxed">
                 Run Solon on your Mac or server. Free and open-source forever.
@@ -91,7 +91,7 @@ export default function Onboarding() {
               {mac && (
                 <a
                   href={DMG_URL}
-                  className="flex items-center justify-center gap-2 w-full bg-brand hover:bg-brand/90 text-white font-medium rounded-xl px-6 py-3 text-sm transition-colors"
+                  className="flex items-center justify-center gap-2 w-full bg-brand text-white font-semibold rounded-lg px-6 py-2.5 text-sm hover:opacity-90 transition-opacity"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />

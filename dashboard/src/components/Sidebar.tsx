@@ -8,8 +8,8 @@ import ThemeToggle from './ThemeToggle'
 
 const localNavItems = [
   {
-    to: '/instance/local',
-    label: 'Overview',
+    to: '/home',
+    label: 'Home',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" />
@@ -17,7 +17,7 @@ const localNavItems = [
     ),
   },
   {
-    to: '/instance/local/models',
+    to: '/models',
     label: 'Models',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -26,7 +26,7 @@ const localNavItems = [
     ),
   },
   {
-    to: '/instance/local/keys',
+    to: '/keys',
     label: 'API Keys',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -35,8 +35,8 @@ const localNavItems = [
     ),
   },
   {
-    to: '/instance/local/requests',
-    label: 'Requests',
+    to: '/activity',
+    label: 'Activity',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -44,7 +44,7 @@ const localNavItems = [
     ),
   },
   {
-    to: '/instance/local/settings',
+    to: '/settings',
     label: 'Settings',
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -126,7 +126,9 @@ export default function Sidebar() {
       <aside className={`fixed top-0 left-0 z-50 h-full w-60 bg-brand text-white flex flex-col transition-transform lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         {/* Logo */}
         <div className="flex items-center gap-2.5 px-5 py-5">
-          <div className="h-8 w-8 rounded-lg bg-brand-light flex items-center justify-center font-bold text-sm">S</div>
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" style={{filter: 'drop-shadow(0 0 6px rgba(108, 99, 255, 0.4))'}}>
+            <circle cx="14" cy="14" r="11" fill="white" />
+          </svg>
           <div>
             <div className="font-semibold text-sm">
               {mode === 'cloud' ? 'Solon Cloud' : 'Solon'}
