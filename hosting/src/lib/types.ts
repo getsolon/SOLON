@@ -47,3 +47,40 @@ export interface SessionUser {
   email: string;
   name: string;
 }
+
+// API response types (from cloud API)
+
+export interface Instance {
+  id: string;
+  name: string;
+  url: string;
+  status: string;
+  version: string | null;
+  models_count: number;
+  added_at: string;
+}
+
+export interface ManagedInstance {
+  id: string;
+  name: string;
+  tier: string;
+  status: string;
+  ipv4: string | null;
+  region: string;
+  dashboard_url: string | null;
+  created_at: string;
+  ready_at: string | null;
+}
+
+export interface BillingInfo {
+  plan: string;
+  status: string;
+  current_period_end: string | null;
+  usage: {
+    instances: { used: number; limit: number };
+    requests: { used: number; limit: number };
+    team_members: { used: number; limit: number };
+  };
+  managed_instances: ManagedInstance[];
+  payment_method: unknown;
+}

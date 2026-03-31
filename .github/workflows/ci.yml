@@ -149,14 +149,29 @@ jobs:
           node-version: '20'
 
       - name: Build hosting app
-        run: cd hosting && npm install && npx @cloudflare/next-on-pages
+        run: cd hosting && npm install && npm run build
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy hosting/.vercel/output/static --project-name=solon-app
+          command: pages deploy hosting/out --project-name=solon-app
+
+  cloud-api:
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy cloud API
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
+          workingDirectory: cloud
 
   install-worker:
     needs: test
