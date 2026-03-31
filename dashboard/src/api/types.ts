@@ -182,6 +182,78 @@ export interface SandboxStats {
   net_tx_mb: number
 }
 
+// Cloud API types
+
+export interface User {
+  id: string
+  name: string
+  email: string
+  plan: 'free' | 'pro' | 'team' | 'enterprise'
+  avatar_url: string | null
+  role: 'admin' | 'user' | 'waitlisted'
+  provider: 'github' | 'google' | null
+  created_at: string
+}
+
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  avatar_url: string | null
+  role: 'admin' | 'user' | 'waitlisted'
+  provider: 'github' | 'google' | null
+  created_at: string
+}
+
+export interface AuthResponse {
+  token: string
+  user: User
+}
+
+export interface Instance {
+  id: string
+  name: string
+  url: string
+  api_key: string
+  status: 'online' | 'offline' | 'unknown'
+  version?: string
+  models_count?: number
+  added_at: string
+}
+
+export interface BillingInfo {
+  plan: 'free' | 'pro' | 'team' | 'enterprise'
+  status: 'active' | 'past_due' | 'canceled'
+  current_period_end: string
+  usage: {
+    instances: { used: number; limit: number }
+    requests: { used: number; limit: number }
+    team_members: { used: number; limit: number }
+  }
+  payment_method?: {
+    type: string
+    last4: string
+    exp: string
+  }
+}
+
+export interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: 'owner' | 'admin' | 'member'
+  joined_at: string
+  last_active?: string
+}
+
+export interface CloudAPIToken {
+  id: string
+  name: string
+  prefix: string
+  created_at: string
+  last_used?: string
+}
+
 // Download/pull types
 
 export interface DownloadProgress {

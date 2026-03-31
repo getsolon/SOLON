@@ -112,7 +112,7 @@ function InstanceDetail() {
   if (loading) {
     return (
       <div className="flex justify-center pt-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-light border-t-transparent" />
       </div>
     );
   }
@@ -157,7 +157,7 @@ function InstanceDetail() {
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="rounded-xl bg-white p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">
               Connection Info
             </h2>
@@ -232,7 +232,7 @@ function InstanceDetail() {
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="rounded-xl bg-white p-6 border border-gray-100">
             <h2 className="text-lg font-semibold text-gray-900">Details</h2>
             <dl className="mt-4 space-y-3">
               <div className="flex justify-between">
@@ -314,7 +314,7 @@ export default function InstanceDetailPage() {
     <Suspense
       fallback={
         <div className="flex justify-center pt-12">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-light border-t-transparent" />
         </div>
       }
     >

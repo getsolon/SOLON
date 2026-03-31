@@ -156,7 +156,7 @@ export default function NewInstancePage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               pattern="[a-z0-9][a-z0-9-]*[a-z0-9]"
-              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-light focus:ring-brand-light sm:text-sm"
               placeholder="my-inference-server"
             />
           </div>
@@ -174,7 +174,7 @@ export default function NewInstancePage() {
                   onClick={() => setSelectedTier(tier.id)}
                   className={`relative rounded-xl border-2 p-4 text-left transition-all ${
                     selectedTier === tier.id
-                      ? "border-indigo-600 bg-indigo-50 ring-1 ring-indigo-600"
+                      ? "border-brand-light bg-brand-light/10 ring-1 ring-brand-light"
                       : "border-gray-200 bg-white hover:border-gray-300"
                   }`}
                 >
@@ -185,7 +185,7 @@ export default function NewInstancePage() {
                     <span
                       className={`text-sm font-medium ${
                         selectedTier === tier.id
-                          ? "text-indigo-600"
+                          ? "text-brand-light"
                           : "text-gray-500"
                       }`}
                     >
@@ -199,7 +199,7 @@ export default function NewInstancePage() {
                     {tier.description}
                   </p>
                   {selectedTier === tier.id && (
-                    <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-indigo-600 flex items-center justify-center">
+                    <div className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-brand-light flex items-center justify-center">
                       <svg
                         className="h-3 w-3 text-white"
                         fill="none"
@@ -232,7 +232,7 @@ export default function NewInstancePage() {
               id="region"
               value={selectedRegion}
               onChange={(e) => setSelectedRegion(e.target.value)}
-              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-light focus:ring-brand-light sm:text-sm"
             >
               {regions.map((region) => (
                 <option key={region.id} value={region.id}>
@@ -247,7 +247,7 @@ export default function NewInstancePage() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? "Redirecting to checkout..." : "Continue to Payment"}
             </button>
@@ -279,7 +279,7 @@ export default function NewInstancePage() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-light focus:ring-brand-light sm:text-sm"
               placeholder="My Solon Server"
             />
           </div>
@@ -297,7 +297,7 @@ export default function NewInstancePage() {
               required
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
+              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-light focus:ring-brand-light sm:text-sm font-mono"
               placeholder="https://your-server.example.com"
             />
           </div>
@@ -318,7 +318,7 @@ export default function NewInstancePage() {
               required
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm font-mono"
+              className="mt-2 block w-full rounded-lg border-gray-300 shadow-sm focus:border-brand-light focus:ring-brand-light sm:text-sm font-mono"
               placeholder="sol_sk_live_..."
             />
           </div>
@@ -327,7 +327,7 @@ export default function NewInstancePage() {
             <button
               type="submit"
               disabled={loading || !name || !url || !apiKey}
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="rounded-lg bg-brand px-6 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {loading ? "Connecting..." : "Connect Instance"}
             </button>

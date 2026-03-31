@@ -94,7 +94,7 @@ export default function DashboardPage() {
         </div>
         <Link
           href="/dashboard/instances/new"
-          className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition-colors"
         >
           New Instance
         </Link>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
 
       {loading ? (
         <div className="mt-12 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-light border-t-transparent" />
         </div>
       ) : error ? (
         <div className="mt-8 rounded-lg bg-red-50 p-4 text-sm text-red-700">
@@ -131,13 +131,13 @@ export default function DashboardPage() {
           </p>
           <Link
             href="/dashboard/instances/new"
-            className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+            className="mt-6 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-colors"
           >
             Create Instance
           </Link>
         </div>
       ) : (
-        <div className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
+        <div className="mt-6 overflow-hidden rounded-xl bg-white border border-gray-100">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                       </span>
                     </td>
                     <td className="whitespace-nowrap px-6 py-4">
-                      <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700">
+                      <span className="inline-flex items-center rounded-md bg-brand-light/10 px-2 py-1 text-xs font-medium text-brand-light">
                         {instance.tier}
                       </span>
                     </td>
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                     <td className="whitespace-nowrap px-6 py-4 text-right">
                       <Link
                         href={`/dashboard/instances/detail?id=${instance.id}&type=${instance.type}`}
-                        className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                        className="text-sm font-medium text-brand-light hover:text-brand-light/80"
                       >
                         View
                       </Link>

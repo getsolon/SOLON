@@ -20,7 +20,7 @@ const navigation = [
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
-          d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z"
+          d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7"
         />
       </svg>
     ),
@@ -63,8 +63,8 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-light border-t-transparent" />
       </div>
     );
   }
@@ -74,12 +74,20 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 w-64 bg-gray-900">
+      <aside className="fixed inset-y-0 left-0 w-64 bg-brand">
         <div className="flex h-16 items-center gap-2 px-6">
-          <div className="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">S</span>
-          </div>
-          <span className="text-lg font-semibold text-white">Solon</span>
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 28 28"
+            fill="none"
+            style={{ filter: "drop-shadow(0 0 6px rgba(108, 99, 255, 0.4))" }}
+          >
+            <circle cx="14" cy="14" r="11" fill="white" />
+          </svg>
+          <span className="text-lg font-extrabold tracking-tight text-white">
+            Solon
+          </span>
         </div>
 
         <nav className="mt-4 px-3 space-y-1">
@@ -96,8 +104,8 @@ export default function DashboardLayout({
                 href={item.href}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-gray-800 text-white"
-                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                    ? "bg-white/[0.12] text-white"
+                    : "text-white/60 hover:bg-white/[0.08] hover:text-white"
                 }`}
               >
                 {item.icon}
@@ -107,7 +115,7 @@ export default function DashboardLayout({
           })}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 border-t border-gray-800 p-4">
+        <div className="absolute bottom-0 left-0 right-0 border-t border-white/[0.08] p-4">
           <div className="mb-3 flex items-center gap-3 px-3">
             {user.avatar_url ? (
               <img
@@ -116,8 +124,8 @@ export default function DashboardLayout({
                 className="h-8 w-8 rounded-full"
               />
             ) : (
-              <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center">
-                <span className="text-sm font-medium text-gray-300">
+              <div className="h-8 w-8 rounded-full bg-white/[0.12] flex items-center justify-center">
+                <span className="text-sm font-medium text-white">
                   {user.name?.[0]?.toUpperCase() || "?"}
                 </span>
               </div>
@@ -126,12 +134,12 @@ export default function DashboardLayout({
               <p className="truncate text-sm font-medium text-white">
                 {user.name}
               </p>
-              <p className="truncate text-xs text-gray-400">{user.email}</p>
+              <p className="truncate text-xs text-white/50">{user.email}</p>
             </div>
           </div>
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/60 hover:bg-white/[0.08] hover:text-white transition-colors"
           >
             <svg
               className="h-5 w-5"
@@ -152,8 +160,8 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <main className="ml-64 flex-1 bg-gray-50">
-        <div className="p-8">{children}</div>
+      <main className="ml-64 flex-1 bg-white">
+        <div className="max-w-6xl mx-auto px-8 py-8">{children}</div>
       </main>
     </div>
   );

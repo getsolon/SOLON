@@ -47,7 +47,7 @@ export default function BillingPage() {
   if (loading) {
     return (
       <div className="flex justify-center pt-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent" />
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-light border-t-transparent" />
       </div>
     );
   }
@@ -78,7 +78,7 @@ export default function BillingPage() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Current Plan */}
-          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="rounded-xl bg-white p-6 border border-gray-100">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
                 Current Plan
@@ -134,7 +134,7 @@ export default function BillingPage() {
                           <span className="text-sm font-medium text-gray-900">
                             {inst.name}
                           </span>
-                          <span className="ml-2 inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          <span className="ml-2 inline-flex items-center rounded-md bg-brand-light/10 px-2 py-0.5 text-xs font-medium text-brand-light">
                             {inst.tier}
                           </span>
                         </div>
@@ -151,7 +151,7 @@ export default function BillingPage() {
               <button
                 onClick={handlePortalRedirect}
                 disabled={portalLoading}
-                className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                className="rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50 transition-colors"
               >
                 {portalLoading ? "Opening..." : "Manage in Stripe"}
               </button>
@@ -160,11 +160,11 @@ export default function BillingPage() {
         </div>
 
         <div>
-          <div className="rounded-xl bg-indigo-50 p-6">
-            <h3 className="text-sm font-semibold text-indigo-900">
+          <div className="rounded-xl bg-brand-light/10 p-6 rounded-xl border border-brand-light/20">
+            <h3 className="text-sm font-semibold text-brand">
               Need more instances?
             </h3>
-            <p className="mt-2 text-sm text-indigo-700">
+            <p className="mt-2 text-sm text-brand-light">
               Each managed instance is billed separately based on its tier.
               Deploy as many as you need.
             </p>
