@@ -90,12 +90,11 @@ func (r *Registry) Pull(ctx context.Context, name string, progressFn func(event 
 		if progressFn != nil {
 			progressFn(DownloadProgress{Event: "start", Message: "downloading from Solon mirror"})
 		}
-		result, err = DownloadFromURL(ctx, source.R2URL, blobsDir, progressFn)
-		if err != nil {
-			// R2 failed — fall back to HuggingFace
-			result = nil
-			err = nil
+		r2Result, r2Err := DownloadFromURL(ctx, source.R2URL, blobsDir, progressFn)
+		if r2Err == nil {
+			result = r2Result
 		}
+		// If R2 failed, result stays nil → falls through to HuggingFace
 	}
 
 	// Fall back to HuggingFace
