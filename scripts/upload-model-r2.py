@@ -84,7 +84,7 @@ def download_from_hf(repo, filename, output_dir):
     if os.path.exists(output_path):
         os.remove(output_path)
     print(f"Downloading {url}...")
-    cmd = ["curl", "-L", "-o", output_path, "--progress-bar", "-f", url]
+    cmd = ["curl", "-L", "-o", output_path, "--progress-bar", "-f", "--retry", "5", "--retry-delay", "3", "-C", "-", url]
     hf_token = os.environ.get("HF_TOKEN")
     if hf_token:
         cmd[1:1] = ["-H", f"Authorization: Bearer {hf_token}"]
