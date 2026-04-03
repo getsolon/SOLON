@@ -214,9 +214,33 @@ func (g *Gateway) handleOpenClawSend(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	w.Header().Set("Content-Type", "application/json")
+	// Forward Content-Type from the agent bridge (may be SSE or JSON)
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "application/json"
+	}
+	w.Header().Set("Content-Type", ct)
+	if ct == "text/event-stream" {
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+	}
 	w.WriteHeader(resp.StatusCode)
-	_, _ = io.Copy(w, resp.Body)
+	// Flush SSE events as they arrive
+	if flusher, ok := w.(http.Flusher); ok && ct == "text/event-stream" {
+		buf := make([]byte, 4096)
+		for {
+			n, readErr := resp.Body.Read(buf)
+			if n > 0 {
+				_, _ = w.Write(buf[:n])
+				flusher.Flush()
+			}
+			if readErr != nil {
+				break
+			}
+		}
+	} else {
+		_, _ = io.Copy(w, resp.Body)
+	}
 }
 
 func (g *Gateway) handleOpenClawStart(w http.ResponseWriter, r *http.Request) {

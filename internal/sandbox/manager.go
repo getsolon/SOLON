@@ -615,7 +615,7 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 					// sending messages via 'openclaw agent' (handles auth internally)
 					"cat > /tmp/agent-api.mjs << 'API'\n"+
 						"import { createServer } from 'http';\n"+
-						"import { execSync } from 'child_process';\n"+
+						"import { spawn } from 'child_process';\n"+
 						"const PORT = %d;\n"+
 						"const server = createServer((req, res) => {\n"+
 						"  if (req.method === 'POST' && req.url === '/send') {\n"+
@@ -624,12 +624,35 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 						"    req.on('end', () => {\n"+
 						"      try {\n"+
 						"        const { message } = JSON.parse(body);\n"+
-						"        const result = execSync(\n"+
-						"          `openclaw agent --agent main --message \"${message.replace(/\"/g, '\\\\\"')}\" --json --timeout 120`,\n"+
-						"          { timeout: 130000, encoding: 'utf8', env: { ...process.env, HOME: '/root' } }\n"+
+						"        const escaped = message.replace(/\\\"/g, '\\\\\\\"');\n"+
+						"        const proc = spawn('openclaw',\n"+
+						"          ['agent', '--agent', 'main', '--message', escaped, '--json', '--timeout', '120'],\n"+
+						"          { env: { ...process.env, HOME: '/root' }, timeout: 130000 }\n"+
 						"        );\n"+
-						"        res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });\n"+
-						"        res.end(result);\n"+
+						"        res.writeHead(200, {\n"+
+						"          'Content-Type': 'text/event-stream',\n"+
+						"          'Cache-Control': 'no-cache',\n"+
+						"          'Connection': 'keep-alive',\n"+
+						"          'Access-Control-Allow-Origin': '*'\n"+
+						"        });\n"+
+						"        proc.stdout.on('data', d => {\n"+
+						"          const lines = d.toString().split('\\n').filter(l => l.trim());\n"+
+						"          for (const line of lines) {\n"+
+						"            res.write('data: ' + line + '\\n\\n');\n"+
+						"          }\n"+
+						"        });\n"+
+						"        proc.stderr.on('data', d => {\n"+
+						"          res.write('event: error\\ndata: ' + JSON.stringify({ error: d.toString() }) + '\\n\\n');\n"+
+						"        });\n"+
+						"        proc.on('close', code => {\n"+
+						"          res.write('event: done\\ndata: ' + JSON.stringify({ exit_code: code }) + '\\n\\n');\n"+
+						"          res.end();\n"+
+						"        });\n"+
+						"        proc.on('error', e => {\n"+
+						"          res.write('event: error\\ndata: ' + JSON.stringify({ error: e.message }) + '\\n\\n');\n"+
+						"          res.end();\n"+
+						"        });\n"+
+						"        req.on('close', () => { if (!proc.killed) proc.kill(); });\n"+
 						"      } catch (e) {\n"+
 						"        res.writeHead(500, { 'Content-Type': 'application/json' });\n"+
 						"        res.end(JSON.stringify({ error: e.message || 'agent error' }));\n"+

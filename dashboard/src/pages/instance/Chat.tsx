@@ -80,12 +80,57 @@ export default function Chat() {
         const err = await resp.json().catch(() => ({ error: { message: resp.statusText } }))
         throw new Error((err as { error?: { message?: string } }).error?.message || `HTTP ${resp.status}`)
       }
-      const data = await resp.json() as Record<string, unknown>
-      // OpenClaw agent response: result.payloads[0].text
-      const result = data.result as Record<string, unknown> | undefined
-      const payloads = result?.payloads as { text?: string }[] | undefined
-      const content = payloads?.[0]?.text || (data.reply as string) || (data.content as string) || JSON.stringify(data)
-      setMessages(prev => prev.map(m => m.id === id ? { ...m, content, isStreaming: false } : m))
+
+      const contentType = resp.headers.get('content-type') ?? ''
+      if (contentType.includes('text/event-stream') && resp.body) {
+        // Streaming SSE response from the agent bridge
+        const reader = resp.body.getReader()
+        const decoder = new TextDecoder()
+        let accumulated = ''
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          const events = buffer.split('\n\n')
+          buffer = events.pop() ?? ''
+          for (const event of events) {
+            const lines = event.split('\n')
+            let eventType = 'message'
+            let data = ''
+            for (const line of lines) {
+              if (line.startsWith('event: ')) eventType = line.slice(7)
+              else if (line.startsWith('data: ')) data += line.slice(6)
+            }
+            if (eventType === 'done') break
+            if (eventType === 'error') {
+              const parsed = JSON.parse(data) as { error?: string }
+              if (parsed.error) accumulated += `\n[error: ${parsed.error}]`
+            } else if (data) {
+              // Try to parse JSON output from openclaw agent
+              try {
+                const parsed = JSON.parse(data) as Record<string, unknown>
+                const result = parsed.result as Record<string, unknown> | undefined
+                const payloads = result?.payloads as { text?: string }[] | undefined
+                const chunk = payloads?.[0]?.text || (parsed.reply as string) || (parsed.content as string) || data
+                accumulated += chunk
+              } catch {
+                accumulated += data
+              }
+            }
+            setMessages(prev => prev.map(m => m.id === id ? { ...m, content: accumulated } : m))
+          }
+        }
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, content: accumulated, isStreaming: false } : m))
+      } else {
+        // Fallback: non-streaming JSON response
+        const data = await resp.json() as Record<string, unknown>
+        const result = data.result as Record<string, unknown> | undefined
+        const payloads = result?.payloads as { text?: string }[] | undefined
+        const content = payloads?.[0]?.text || (data.reply as string) || (data.content as string) || JSON.stringify(data)
+        setMessages(prev => prev.map(m => m.id === id ? { ...m, content, isStreaming: false } : m))
+      }
     } catch (e) {
       setError((e as Error).message)
       setMessages(prev => prev.filter(m => m.id !== id || m.content !== ''))
