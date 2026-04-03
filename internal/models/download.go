@@ -140,9 +140,12 @@ func DownloadModel(ctx context.Context, repo, fileFilter, blobsDir string, progr
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
+	// Combine filter + extension into a single glob-style pattern.
+	// The HF downloader treats multiple filters as OR, but we need AND.
+	combinedFilter := fileFilter + ".gguf"
 	job := hfdownloader.Job{
 		Repo:    repo,
-		Filters: []string{fileFilter, "gguf"}, // match the quantization AND .gguf extension
+		Filters: []string{combinedFilter},
 	}
 
 	cfg := hfdownloader.Settings{
