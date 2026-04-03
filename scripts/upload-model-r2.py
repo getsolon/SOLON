@@ -25,26 +25,26 @@ MODELS = {
     "qwen2.5-1.5b-Q4_K_M.gguf": {"repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "hf_file": "qwen2.5-1.5b-instruct-q4_k_m.gguf"},
     "deepseek-r1-1.5b-Q4_K_M.gguf": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "hf_file": "DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf"},
     "nomic-embed-text-137m.gguf": {"repo": "nomic-ai/nomic-embed-text-v1.5-GGUF", "hf_file": "nomic-embed-text-v1.5.Q8_0.gguf"},
-    "mxbai-embed-large-335m.gguf": {"repo": "mixedbread-ai/mxbai-embed-large-v1", "hf_file": "gguf/mxbai-embed-large-v1-Q8_0.gguf"},
-    "starcoder2-3b-Q4_K_M.gguf": {"repo": "bartowski/starcoder2-3b-GGUF", "hf_file": "starcoder2-3b-Q4_K_M.gguf"},
-    "codellama-7b-Q4_K_M.gguf": {"repo": "bartowski/CodeLlama-7b-Instruct-GGUF", "hf_file": "CodeLlama-7b-Instruct-Q4_K_M.gguf"},
+    "mxbai-embed-large-335m.gguf": {"repo": "mixedbread-ai/mxbai-embed-large-v1", "hf_file": "gguf/mxbai-embed-large-v1-f16.gguf"},
+    "starcoder2-3b-Q4_K_M.gguf": {"repo": "QuantFactory/starcoder2-3b-GGUF", "hf_file": "starcoder2-3b.Q4_K_M.gguf"},
+    "codellama-7b-Q4_K_M.gguf": {"repo": "TheBloke/CodeLlama-7B-Instruct-GGUF", "hf_file": "codellama-7b-instruct.Q4_K_M.gguf"},
     "command-r-7b-Q4_K_M.gguf": {"repo": "bartowski/c4ai-command-r7b-12-2024-GGUF", "hf_file": "c4ai-command-r7b-12-2024-Q4_K_M.gguf"},
     "deepseek-r1-7b-Q4_K_M.gguf": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF", "hf_file": "DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf"},
 
     # --- Priority 2: Medium models (5-15 GB) ---
-    "gemma3-9b-Q4_K_M.gguf": {"repo": "bartowski/google_gemma-3-9b-it-GGUF", "hf_file": "google_gemma-3-9b-it-Q4_K_M.gguf"},
-    "qwen2.5-14b-Q4_K_M.gguf": {"repo": "Qwen/Qwen2.5-14B-Instruct-GGUF", "hf_file": "qwen2.5-14b-instruct-q4_k_m.gguf"},
-    "phi4-14b-Q4_K_M.gguf": {"repo": "bartowski/phi-4-GGUF", "hf_file": "phi-4-Q4_K_M.gguf"},
-    "codellama-13b-Q4_K_M.gguf": {"repo": "bartowski/CodeLlama-13b-Instruct-GGUF", "hf_file": "CodeLlama-13b-Instruct-Q4_K_M.gguf"},
-    "starcoder2-7b-Q4_K_M.gguf": {"repo": "bartowski/starcoder2-7b-GGUF", "hf_file": "starcoder2-7b-Q4_K_M.gguf"},
-    "starcoder2-15b-Q4_K_M.gguf": {"repo": "bartowski/starcoder2-15b-GGUF", "hf_file": "starcoder2-15b-Q4_K_M.gguf"},
+    "gemma3-12b-Q4_K_M.gguf": {"repo": "lmstudio-community/gemma-3-12b-it-GGUF", "hf_file": "gemma-3-12b-it-Q4_K_M.gguf"},
+    "qwen2.5-14b-Q4_K_M.gguf": {"repo": "bartowski/Qwen2.5-14B-Instruct-GGUF", "hf_file": "Qwen2.5-14B-Instruct-Q4_K_M.gguf"},
+    "phi4-14b-Q4_K_M.gguf": {"repo": "QuantFactory/phi-4-GGUF", "hf_file": "phi-4.Q4_K_M.gguf"},
+    "codellama-13b-Q4_K_M.gguf": {"repo": "TheBloke/CodeLlama-13B-Instruct-GGUF", "hf_file": "codellama-13b-instruct.Q4_K_M.gguf"},
+    "starcoder2-7b-Q4_K_M.gguf": {"repo": "QuantFactory/starcoder2-7b-GGUF", "hf_file": "starcoder2-7b.Q4_K_M.gguf"},
+    "starcoder2-15b-Q4_K_M.gguf": {"repo": "QuantFactory/starcoder2-15b-GGUF", "hf_file": "starcoder2-15b.Q4_K_M.gguf"},
 
     # --- Priority 3: Large models (15+ GB) ---
-    "gemma3-27b-Q4_K_M.gguf": {"repo": "bartowski/google_gemma-3-27b-it-GGUF", "hf_file": "google_gemma-3-27b-it-Q4_K_M.gguf"},
-    "qwen2.5-32b-Q4_K_M.gguf": {"repo": "Qwen/Qwen2.5-32B-Instruct-GGUF", "hf_file": "qwen2.5-32b-instruct-q4_k_m.gguf"},
+    "gemma3-27b-Q4_K_M.gguf": {"repo": "lmstudio-community/gemma-3-27b-it-GGUF", "hf_file": "gemma-3-27b-it-Q4_K_M.gguf"},
+    "qwen2.5-32b-Q4_K_M.gguf": {"repo": "bartowski/Qwen2.5-32B-Instruct-GGUF", "hf_file": "Qwen2.5-32B-Instruct-Q4_K_M.gguf"},
     "deepseek-r1-32b-Q4_K_M.gguf": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF", "hf_file": "DeepSeek-R1-Distill-Qwen-32B-Q4_K_M.gguf"},
     "command-r-35b-Q4_K_M.gguf": {"repo": "bartowski/c4ai-command-r-v01-GGUF", "hf_file": "c4ai-command-r-v01-Q4_K_M.gguf"},
-    "codellama-34b-Q4_K_M.gguf": {"repo": "bartowski/CodeLlama-34b-Instruct-GGUF", "hf_file": "CodeLlama-34b-Instruct-Q4_K_M.gguf"},
+    "codellama-34b-Q4_K_M.gguf": {"repo": "TheBloke/CodeLlama-34B-Instruct-GGUF", "hf_file": "codellama-34b-instruct.Q4_K_M.gguf"},
     "deepseek-r1-70b-Q4_K_M.gguf": {"repo": "bartowski/DeepSeek-R1-Distill-Llama-70B-GGUF", "hf_file": "DeepSeek-R1-Distill-Llama-70B-Q4_K_M.gguf"},
 }
 
@@ -77,11 +77,18 @@ def download_from_hf(repo, filename, output_dir):
     """Download a specific file from HuggingFace using curl."""
     url = f"https://huggingface.co/{repo}/resolve/main/{filename}"
     output_path = os.path.join(output_dir, os.path.basename(filename))
-    if os.path.exists(output_path):
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
         print(f"Already downloaded: {output_path}")
         return output_path
+    # Remove any previous failed download (error pages are tiny)
+    if os.path.exists(output_path):
+        os.remove(output_path)
     print(f"Downloading {url}...")
-    subprocess.run(["curl", "-L", "-o", output_path, "--progress-bar", url], check=True)
+    cmd = ["curl", "-L", "-o", output_path, "--progress-bar", "-f", url]
+    hf_token = os.environ.get("HF_TOKEN")
+    if hf_token:
+        cmd[1:1] = ["-H", f"Authorization: Bearer {hf_token}"]
+    subprocess.run(cmd, check=True)
     return output_path
 
 def list_models():

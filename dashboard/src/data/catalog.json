@@ -17,15 +17,15 @@
     "name": "gemma3",
     "description": "Google's lightweight open model family. Fast inference with strong multilingual and vision capabilities.",
     "creator": "Google",
-    "sizes": ["4b", "9b", "27b"],
+    "sizes": ["4b", "12b", "27b"],
     "category": "chat",
     "capabilities": ["chat", "vision", "multilingual"],
     "context": 128000,
-    "vram": {"4b": 3.3, "9b": 5.5, "27b": 17.2},
+    "vram": {"4b": 3.3, "12b": 7.3, "27b": 17.2},
     "sources": {
       "4b": {"repo": "bartowski/google_gemma-3-4b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-4b-Q4_K_M.gguf"},
-      "9b": {"repo": "bartowski/google_gemma-3-9b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-9b-Q4_K_M.gguf"},
-      "27b": {"repo": "bartowski/google_gemma-3-27b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-27b-Q4_K_M.gguf"}
+      "12b": {"repo": "lmstudio-community/gemma-3-12b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-12b-Q4_K_M.gguf"},
+      "27b": {"repo": "lmstudio-community/gemma-3-27b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-27b-Q4_K_M.gguf"}
     }
   },
   {
@@ -68,7 +68,7 @@
     "vram": {"mini": 2.5, "14b": 9.1},
     "sources": {
       "mini": {"repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/phi4-mini-Q4_K_M.gguf"},
-      "14b": {"repo": "bartowski/phi-4-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/phi4-14b-Q4_K_M.gguf"}
+      "14b": {"repo": "QuantFactory/phi-4-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/phi4-14b-Q4_K_M.gguf"}
     }
   },
   {
@@ -138,9 +138,9 @@
     "context": 16000,
     "vram": {"7b": 3.8, "13b": 7.4, "34b": 19.0},
     "sources": {
-      "7b": {"repo": "bartowski/CodeLlama-7b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-7b-Q4_K_M.gguf"},
-      "13b": {"repo": "bartowski/CodeLlama-13b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-13b-Q4_K_M.gguf"},
-      "34b": {"repo": "bartowski/CodeLlama-34b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-34b-Q4_K_M.gguf"}
+      "7b": {"repo": "TheBloke/CodeLlama-7B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-7b-Q4_K_M.gguf"},
+      "13b": {"repo": "TheBloke/CodeLlama-13B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-13b-Q4_K_M.gguf"},
+      "34b": {"repo": "TheBloke/CodeLlama-34B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-34b-Q4_K_M.gguf"}
     }
   },
   {
@@ -153,9 +153,9 @@
     "context": 16000,
     "vram": {"3b": 1.7, "7b": 4.0, "15b": 9.0},
     "sources": {
-      "3b": {"repo": "bartowski/starcoder2-3b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-3b-Q4_K_M.gguf"},
-      "7b": {"repo": "bartowski/starcoder2-7b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-7b-Q4_K_M.gguf"},
-      "15b": {"repo": "bartowski/starcoder2-15b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-15b-Q4_K_M.gguf"}
+      "3b": {"repo": "QuantFactory/starcoder2-3b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-3b-Q4_K_M.gguf"},
+      "7b": {"repo": "QuantFactory/starcoder2-7b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-7b-Q4_K_M.gguf"},
+      "15b": {"repo": "QuantFactory/starcoder2-15b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-15b-Q4_K_M.gguf"}
     }
   },
   {
@@ -181,7 +181,7 @@
     "context": 512,
     "vram": {"335m": 0.5},
     "sources": {
-      "335m": {"repo": "mixedbread-ai/mxbai-embed-large-v1-GGUF", "file": "Q8_0", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/mxbai-embed-large-335m.gguf"}
+      "335m": {"repo": "mixedbread-ai/mxbai-embed-large-v1", "file": "f16", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/mxbai-embed-large-335m.gguf"}
     }
   }
 ]
