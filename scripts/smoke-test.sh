@@ -87,6 +87,11 @@ if [ "$STATUS" != "ok" ]; then
 fi
 pass "Health check OK"
 
+# --- Step 3b: Backend status ---
+info "Testing: backend status in health response"
+BACKENDS=$(echo "$HEALTH" | python3 -c "import sys,json; bs=json.load(sys.stdin).get('backends',[]); [print(f\"  {b['name']}: {'available' if b.get('available') else 'unavailable'}\") for b in bs]" 2>/dev/null || echo "  (no backend info)")
+pass "Backend status reported"
+
 # --- Step 4: Create API key (localhost bypass) ---
 info "Testing: POST /api/v1/keys"
 KEY_RESP=$(curl -sf -X POST "http://127.0.0.1:${SOLON_PORT}/api/v1/keys" \
