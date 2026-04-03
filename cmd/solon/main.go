@@ -58,6 +58,7 @@ func serveCmd() *cobra.Command {
 	var enableRemote bool
 	var preload string
 	var memBudget int64
+	var dockerSocket string
 
 	cmd := &cobra.Command{
 		Use:   "serve",
@@ -145,15 +146,20 @@ func serveCmd() *cobra.Command {
 
 			// Initialize sandbox manager (optional — requires Docker)
 			var sandboxMgr *sandbox.Manager
-			dockerSocket := "/var/run/docker.sock"
-			sandboxMgr = sandbox.NewManager(dockerSocket, db, port)
+			resolvedSocket := sandbox.ResolveDockerSocket(dockerSocket)
+			sandboxMgr = sandbox.NewManager(resolvedSocket, db, port)
 			if sandboxMgr.Available(cmd.Context()) {
-				log.Println("Docker detected — sandbox management enabled")
+				log.Printf("Docker detected at %s — sandbox management enabled", resolvedSocket)
 				if err := sandboxMgr.EnsureNetwork(cmd.Context()); err != nil {
 					log.Printf("Warning: could not create sandbox network: %v", err)
 				}
+				// Start container health monitor in background
+				monitor := sandbox.NewHealthMonitor(sandboxMgr, 30*time.Second)
+				go monitor.Run(cmd.Context())
 			} else {
-				log.Println("Docker not detected — sandbox management disabled")
+				log.Println("Docker not detected — sandbox and OpenClaw features disabled")
+				log.Println("  Install Docker Desktop: https://docs.docker.com/get-docker/")
+				log.Println("  Or set --docker-socket to a custom Docker socket path")
 				sandboxMgr = nil
 			}
 
@@ -226,6 +232,7 @@ func serveCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&enableRemote, "remote", false, "Enable remote access via Solon Relay")
 	cmd.Flags().StringVar(&preload, "preload", "", "Comma-separated models to preload (e.g. llama3.2:3b,mistral:7b)")
 	cmd.Flags().Int64Var(&memBudget, "memory-budget", 0, "Memory budget in MB (0 = auto, 80% system RAM)")
+	cmd.Flags().StringVar(&dockerSocket, "docker-socket", "", "Docker socket path (auto-detected if empty)")
 	return cmd
 }
 

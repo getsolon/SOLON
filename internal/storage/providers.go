@@ -23,13 +23,18 @@ var WellKnownProviders = map[string]string{
 	"openai":    "https://api.openai.com",
 }
 
-// CreateProvider stores a new external API provider.
+// CreateProvider stores a new external API provider with an encrypted API key.
 func (d *DB) CreateProvider(name, baseURL, apiKey string) (*ProviderConfig, error) {
 	id := uuid.New().String()
 
-	_, err := d.db.Exec(
+	encKey, err := encryptValue(apiKey)
+	if err != nil {
+		return nil, fmt.Errorf("encrypting API key: %w", err)
+	}
+
+	_, err = d.db.Exec(
 		`INSERT INTO providers (id, name, base_url, api_key) VALUES (?, ?, ?, ?)`,
-		id, name, baseURL, apiKey,
+		id, name, baseURL, encKey,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("inserting provider: %w", err)
@@ -58,10 +63,16 @@ func (d *DB) ListProviders() ([]ProviderConfig, error) {
 	var providers []ProviderConfig
 	for rows.Next() {
 		var p ProviderConfig
-		if err := rows.Scan(&p.ID, &p.Name, &p.BaseURL, &p.APIKey, &p.Enabled, &p.CreatedAt); err != nil {
+		var encKey string
+		if err := rows.Scan(&p.ID, &p.Name, &p.BaseURL, &encKey, &p.Enabled, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning provider: %w", err)
 		}
-		p.APIKey = maskKey(p.APIKey)
+		decrypted, err := decryptValue(encKey)
+		if err != nil {
+			p.APIKey = "****"
+		} else {
+			p.APIKey = maskKey(decrypted)
+		}
 		providers = append(providers, p)
 	}
 
@@ -71,25 +82,31 @@ func (d *DB) ListProviders() ([]ProviderConfig, error) {
 // GetProvider returns a single provider by name with a masked API key.
 func (d *DB) GetProvider(name string) (*ProviderConfig, error) {
 	var p ProviderConfig
+	var encKey string
 	err := d.db.QueryRow(
 		`SELECT id, name, base_url, api_key, enabled, created_at FROM providers WHERE name = ?`,
 		name,
-	).Scan(&p.ID, &p.Name, &p.BaseURL, &p.APIKey, &p.Enabled, &p.CreatedAt)
+	).Scan(&p.ID, &p.Name, &p.BaseURL, &encKey, &p.Enabled, &p.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("provider %q not found", name)
 	}
-	p.APIKey = maskKey(p.APIKey)
+	decrypted, err := decryptValue(encKey)
+	if err != nil {
+		p.APIKey = "****"
+	} else {
+		p.APIKey = maskKey(decrypted)
+	}
 	return &p, nil
 }
 
-// GetProviderKey returns the raw (unmasked) API key for internal proxy use.
+// GetProviderKey returns the raw (decrypted) API key for internal proxy use.
 func (d *DB) GetProviderKey(name string) (string, error) {
-	var key string
-	err := d.db.QueryRow(`SELECT api_key FROM providers WHERE name = ? AND enabled = TRUE`, name).Scan(&key)
+	var encKey string
+	err := d.db.QueryRow(`SELECT api_key FROM providers WHERE name = ? AND enabled = TRUE`, name).Scan(&encKey)
 	if err != nil {
 		return "", fmt.Errorf("provider %q not found or disabled", name)
 	}
-	return key, nil
+	return decryptValue(encKey)
 }
 
 // DeleteProvider removes a provider by name.
@@ -105,7 +122,7 @@ func (d *DB) DeleteProvider(name string) error {
 	return nil
 }
 
-// LoadProviders returns all enabled providers with raw API keys (for engine init).
+// LoadProviders returns all enabled providers with decrypted API keys (for engine init).
 func (d *DB) LoadProviders() ([]ProviderConfig, error) {
 	rows, err := d.db.Query(
 		`SELECT id, name, base_url, api_key, enabled, created_at FROM providers WHERE enabled = TRUE`,
@@ -118,9 +135,15 @@ func (d *DB) LoadProviders() ([]ProviderConfig, error) {
 	var providers []ProviderConfig
 	for rows.Next() {
 		var p ProviderConfig
-		if err := rows.Scan(&p.ID, &p.Name, &p.BaseURL, &p.APIKey, &p.Enabled, &p.CreatedAt); err != nil {
+		var encKey string
+		if err := rows.Scan(&p.ID, &p.Name, &p.BaseURL, &encKey, &p.Enabled, &p.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scanning provider: %w", err)
 		}
+		decrypted, err := decryptValue(encKey)
+		if err != nil {
+			return nil, fmt.Errorf("decrypting API key for provider %s: %w", p.Name, err)
+		}
+		p.APIKey = decrypted
 		providers = append(providers, p)
 	}
 

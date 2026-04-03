@@ -46,6 +46,15 @@ func Open(path string) (*DB, error) {
 		return nil, fmt.Errorf("running migrations: %w", err)
 	}
 
+	// Initialize encryption key for provider secrets
+	if err := initSecretKey(path); err != nil {
+		// Non-fatal: encryption is defense-in-depth
+		fmt.Fprintf(os.Stderr, "Warning: could not init secret key: %v\n", err)
+	} else {
+		// Migrate any plaintext provider keys to encrypted
+		store.migrateProviderKeys()
+	}
+
 	return store, nil
 }
 
