@@ -242,15 +242,29 @@ jobs:
           # Download checksums
           gh release download "${{ github.ref_name }}" --pattern "checksums.txt" --dir /tmp
 
-          # Extract SHA for darwin-arm64
-          DARWIN_SHA=$(grep "solon-darwin-arm64" /tmp/checksums.txt | awk '{print $1}')
+          # Extract SHAs per platform
+          DARWIN_ARM64_SHA=$(grep "solon-darwin-arm64" /tmp/checksums.txt | awk '{print $1}')
           LINUX_AMD64_SHA=$(grep "solon-linux-amd64" /tmp/checksums.txt | awk '{print $1}')
           LINUX_ARM64_SHA=$(grep "solon-linux-arm64" /tmp/checksums.txt | awk '{print $1}')
 
           echo "Version: $VERSION"
-          echo "Darwin ARM64 SHA: $DARWIN_SHA"
+          echo "Darwin ARM64 SHA: $DARWIN_ARM64_SHA"
           echo "Linux AMD64 SHA: $LINUX_AMD64_SHA"
           echo "Linux ARM64 SHA: $LINUX_ARM64_SHA"
+
+          # Update formula in-repo (tap repo sync is manual for now)
+          sed -i "s/version \".*\"/version \"$VERSION\"/" homebrew/solon.rb
+
+          # Update SHAs — match each platform block
+          # Darwin ARM64
+          sed -i "/solon-darwin-arm64/{n;s/sha256 \".*\"/sha256 \"$DARWIN_ARM64_SHA\"/}" homebrew/solon.rb
+          # Linux ARM64
+          sed -i "/solon-linux-arm64/{n;s/sha256 \".*\"/sha256 \"$LINUX_ARM64_SHA\"/}" homebrew/solon.rb
+          # Linux AMD64
+          sed -i "/solon-linux-amd64/{n;s/sha256 \".*\"/sha256 \"$LINUX_AMD64_SHA\"/}" homebrew/solon.rb
+
+          echo "Updated homebrew/solon.rb:"
+          cat homebrew/solon.rb
 
   test-install:
     needs: release

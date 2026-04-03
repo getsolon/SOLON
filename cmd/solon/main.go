@@ -256,18 +256,26 @@ func modelsPullCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			engine, err := inference.NewEngine()
+			dataDir, err := models.DataDir()
 			if err != nil {
-				return fmt.Errorf("starting engine: %w", err)
+				return fmt.Errorf("getting data dir: %w", err)
 			}
-			defer func() { _ = engine.Close() }()
+
+			reg, err := models.NewRegistry(dataDir)
+			if err != nil {
+				return fmt.Errorf("initializing registry: %w", err)
+			}
 
 			fmt.Printf("Pulling model %s...\n", name)
 
 			progressFn := func(p models.DownloadProgress) {
 				switch p.Event {
 				case "start":
-					fmt.Printf("  Downloading: %s\n", p.File)
+					if p.File != "" {
+						fmt.Printf("  Downloading: %s\n", p.File)
+					} else if p.Message != "" {
+						fmt.Printf("  %s\n", p.Message)
+					}
 				case "progress":
 					fmt.Printf("\r  %.1f%% (%d / %d MB)",
 						p.Percent,
@@ -280,7 +288,7 @@ func modelsPullCmd() *cobra.Command {
 				}
 			}
 
-			if err := engine.PullModel(cmd.Context(), name, progressFn); err != nil {
+			if err := reg.Pull(cmd.Context(), name, progressFn); err != nil {
 				return err
 			}
 
@@ -295,18 +303,23 @@ func modelsListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "List installed models",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			engine, err := inference.NewEngine()
+			dataDir, err := models.DataDir()
 			if err != nil {
-				return fmt.Errorf("starting engine: %w", err)
-			}
-			defer func() { _ = engine.Close() }()
-
-			models, err := engine.ListModels(cmd.Context())
-			if err != nil {
-				return err
+				return fmt.Errorf("getting data dir: %w", err)
 			}
 
-			if len(models) == 0 {
+			reg, err := models.NewRegistry(dataDir)
+			if err != nil {
+				return fmt.Errorf("initializing registry: %w", err)
+			}
+
+			// List native models from registry
+			regModels, err := reg.List()
+			if err != nil {
+				return fmt.Errorf("listing models: %w", err)
+			}
+
+			if len(regModels) == 0 {
 				fmt.Println("No models installed. Run 'solon models pull <model>' to get started.")
 				fmt.Println()
 				fmt.Println("Available models:")
@@ -319,8 +332,10 @@ func modelsListCmd() *cobra.Command {
 			}
 
 			fmt.Printf("%-30s %-10s %-15s\n", "NAME", "SIZE", "MODIFIED")
-			for _, m := range models {
-				fmt.Printf("%-30s %-10s %-15s\n", m.Name, m.SizeHuman(), m.ModifiedHuman())
+			for _, m := range regModels {
+				sizeStr := formatSize(m.Size)
+				modified := m.PulledAt.Format("2006-01-02")
+				fmt.Printf("%-30s %-10s %-15s\n", m.Name, sizeStr, modified)
 			}
 			return nil
 		},
@@ -333,14 +348,18 @@ func modelsRemoveCmd() *cobra.Command {
 		Short: "Remove a model",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			engine, err := inference.NewEngine()
+			dataDir, err := models.DataDir()
 			if err != nil {
-				return fmt.Errorf("starting engine: %w", err)
+				return fmt.Errorf("getting data dir: %w", err)
 			}
-			defer func() { _ = engine.Close() }()
+
+			reg, err := models.NewRegistry(dataDir)
+			if err != nil {
+				return fmt.Errorf("initializing registry: %w", err)
+			}
 
 			fmt.Printf("Removing model %s...\n", args[0])
-			if err := engine.RemoveModel(cmd.Context(), args[0]); err != nil {
+			if err := reg.Remove(args[0]); err != nil {
 				return err
 			}
 
@@ -356,32 +375,27 @@ func modelsInfoCmd() *cobra.Command {
 		Short: "Show detailed information about an installed model",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			engine, err := inference.NewEngine()
+			dataDir, err := models.DataDir()
 			if err != nil {
-				return fmt.Errorf("starting engine: %w", err)
-			}
-			defer func() { _ = engine.Close() }()
-
-			info, err := engine.GetModelInfo(cmd.Context(), args[0])
-			if err != nil {
-				return err
+				return fmt.Errorf("getting data dir: %w", err)
 			}
 
-			fmt.Printf("Name:         %s\n", info.Name)
-			fmt.Printf("Size:         %s\n", info.SizeHuman())
-			if info.Format != "" {
-				fmt.Printf("Format:       %s\n", info.Format)
+			reg, err := models.NewRegistry(dataDir)
+			if err != nil {
+				return fmt.Errorf("initializing registry: %w", err)
 			}
-			if info.Family != "" {
-				fmt.Printf("Family:       %s\n", info.Family)
+
+			path, err := reg.Resolve(args[0])
+			if err != nil {
+				return fmt.Errorf("model %q not found locally", args[0])
 			}
-			if info.Params != "" {
-				fmt.Printf("Parameters:   %s\n", info.Params)
+
+			info, statErr := os.Stat(path)
+			fmt.Printf("Name:         %s\n", args[0])
+			if statErr == nil {
+				fmt.Printf("Size:         %s\n", formatSize(info.Size()))
+				fmt.Printf("Path:         %s\n", path)
 			}
-			if info.Quantization != "" {
-				fmt.Printf("Quantization: %s\n", info.Quantization)
-			}
-			fmt.Printf("Modified:     %s\n", info.ModifiedHuman())
 			return nil
 		},
 	}
@@ -1222,6 +1236,22 @@ func updateCmd() *cobra.Command {
 
 	cmd.Flags().BoolVar(&force, "force", false, "Force update even if already at latest version")
 	return cmd
+}
+
+// formatSize returns a human-readable file size.
+func formatSize(bytes int64) string {
+	const (
+		MB = 1024 * 1024
+		GB = 1024 * MB
+	)
+	switch {
+	case bytes >= GB:
+		return fmt.Sprintf("%.1f GB", float64(bytes)/float64(GB))
+	case bytes >= MB:
+		return fmt.Sprintf("%.1f MB", float64(bytes)/float64(MB))
+	default:
+		return fmt.Sprintf("%d B", bytes)
+	}
 }
 
 // parseTTL parses a human-friendly duration string like "30d", "24h", "7d".

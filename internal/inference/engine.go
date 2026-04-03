@@ -98,7 +98,15 @@ func NewEngineWithOptions(opts EngineOptions) (*Engine, error) {
 	}
 
 	if len(e.backends) == 0 {
-		return nil, fmt.Errorf("no inference backends available — install models with 'solon models pull', start Ollama, or add a provider with 'solon providers add'")
+		log.Println("Warning: no inference backends available")
+		log.Println("  • Native llama.cpp: " + llamacppStatus(e.llamacpp))
+		log.Println("  • Ollama: not detected at localhost:11434")
+		log.Println("  • External providers: none configured")
+		log.Println()
+		log.Println("To get started:")
+		log.Println("  1. Pull a model:  solon models pull llama3.2:3b")
+		log.Println("  2. Or install Ollama: https://ollama.com/download")
+		log.Println("  3. Or add a provider: solon providers add openai <api-key>")
 	}
 
 	// Preload models if specified
@@ -521,10 +529,48 @@ func (e *Engine) RemoveProvider(name string) {
 // Auto-loads the model on first request; evicts LRU when at capacity.
 func (e *Engine) backendForModel(model string) (backends.Backend, error) {
 	if len(e.backends) == 0 {
-		return nil, fmt.Errorf("no inference backends available")
+		return nil, fmt.Errorf("no inference backends available — pull a model with 'solon models pull', start Ollama (https://ollama.com), or add a provider with 'solon providers add'")
 	}
 
 	return e.ensureLoaded(model)
+}
+
+// BackendStatus returns status information about all configured backends.
+func (e *Engine) BackendStatus() []map[string]any {
+	var result []map[string]any
+	for _, b := range e.backends {
+		result = append(result, map[string]any{
+			"name":      b.Name(),
+			"available": b.Available(),
+		})
+	}
+	// Always report llama.cpp status even if not compiled in
+	hasLlamaCpp := false
+	for _, b := range e.backends {
+		if b.Name() == "llama.cpp" {
+			hasLlamaCpp = true
+			break
+		}
+	}
+	if !hasLlamaCpp {
+		result = append(result, map[string]any{
+			"name":      "llama.cpp",
+			"available": false,
+			"reason":    "binary built without native support (no CGO)",
+		})
+	}
+	return result
+}
+
+// llamacppStatus returns a human-readable status for the llama.cpp backend.
+func llamacppStatus(l *backends.LlamaCpp) string {
+	if l == nil {
+		return "not initialized"
+	}
+	if l.Available() {
+		return "available (compiled with native support)"
+	}
+	return "unavailable (binary built without CGO — reinstall with native support or use Ollama)"
 }
 
 func toBackendMessages(messages []ChatMessage) []backends.Message {

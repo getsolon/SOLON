@@ -20,7 +20,7 @@ endif
 
 # Build the binary (includes dashboard + llama.cpp)
 build: build-dashboard build-llamacpp
-	$(CGO_ENV) go build $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/solon
+	$(CGO_ENV) go build -tags llamacpp $(LDFLAGS) -o bin/$(BINARY_NAME) ./cmd/solon
 
 # Build llama.cpp static library via llama-go
 build-llamacpp:
@@ -46,14 +46,14 @@ build-dashboard:
 
 # Build for all platforms
 build-all: build-dashboard build-llamacpp
-	GOOS=darwin GOARCH=arm64 $(CGO_ENV) go build $(LDFLAGS) -o bin/$(BINARY_NAME)-darwin-arm64 ./cmd/solon
-	GOOS=darwin GOARCH=amd64 $(CGO_ENV) go build $(LDFLAGS) -o bin/$(BINARY_NAME)-darwin-amd64 ./cmd/solon
-	GOOS=linux GOARCH=arm64 $(CGO_ENV) go build $(LDFLAGS) -o bin/$(BINARY_NAME)-linux-arm64 ./cmd/solon
-	GOOS=linux GOARCH=amd64 $(CGO_ENV) go build $(LDFLAGS) -o bin/$(BINARY_NAME)-linux-amd64 ./cmd/solon
+	GOOS=darwin GOARCH=arm64 $(CGO_ENV) go build -tags llamacpp $(LDFLAGS) -o bin/$(BINARY_NAME)-darwin-arm64 ./cmd/solon
+	GOOS=darwin GOARCH=amd64 $(CGO_ENV) go build -tags llamacpp $(LDFLAGS) -o bin/$(BINARY_NAME)-darwin-amd64 ./cmd/solon
+	GOOS=linux GOARCH=arm64 $(CGO_ENV) go build -tags llamacpp $(LDFLAGS) -o bin/$(BINARY_NAME)-linux-arm64 ./cmd/solon
+	GOOS=linux GOARCH=amd64 $(CGO_ENV) go build -tags llamacpp $(LDFLAGS) -o bin/$(BINARY_NAME)-linux-amd64 ./cmd/solon
 
 # Run all tests
 test:
-	$(CGO_ENV) go test ./... -v
+	$(CGO_ENV) go test -tags llamacpp ./... -v
 
 # Run linter
 lint:

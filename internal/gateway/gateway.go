@@ -583,10 +583,14 @@ func (g *Gateway) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if v == "" {
 		v = "dev"
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	resp := map[string]any{
 		"status":  "ok",
 		"version": v,
-	})
+	}
+	if g.engine != nil {
+		resp["backends"] = g.engine.BackendStatus()
+	}
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (g *Gateway) handleSystemInfo(w http.ResponseWriter, r *http.Request) {
