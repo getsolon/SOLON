@@ -1,5 +1,5 @@
 import { cloudFetch } from './client'
-import type { User, AdminUser, BillingInfo, TeamMember, CloudAPIToken, Instance } from './types'
+import type { User, AdminUser, BillingInfo, TeamMember, CloudAPIToken, Instance, ManagedInstance } from './types'
 
 export const cloudAPI = {
   async getProfile(): Promise<User> {
@@ -69,6 +69,25 @@ export const cloudAPI = {
 
   async healthCheckInstance(id: string): Promise<{ status: string; version: string | null; models_count: number }> {
     return cloudFetch(`/instances/${id}/health`, { method: 'POST' })
+  },
+
+  // Managed hosting
+  async getManagedInstances(): Promise<ManagedInstance[]> {
+    const data = await cloudFetch<{ instances: ManagedInstance[] }>('/billing/managed')
+    return data.instances
+  },
+
+  async createManagedCheckout(tier: string, region?: string, name?: string): Promise<{ checkout_url: string }> {
+    return cloudFetch<{ checkout_url: string }>('/billing/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ tier, region, name }),
+    })
+  },
+
+  async openBillingPortal(): Promise<{ portal_url: string }> {
+    return cloudFetch<{ portal_url: string }>('/billing/portal', {
+      method: 'POST',
+    })
   },
 
   // Admin

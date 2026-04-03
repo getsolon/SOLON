@@ -88,7 +88,7 @@ async function handleCheckoutCompleted(env: Env, session: Record<string, unknown
       })
 
       await env.DB.prepare(
-        `UPDATE managed_instances SET status = 'provisioning' WHERE id = ?`,
+        `UPDATE managed_instances SET status = 'provisioning', updated_at = datetime('now') WHERE id = ?`,
       ).bind(instanceId).run()
     } catch (err) {
       console.error('Failed to trigger provisioning:', err)
@@ -108,7 +108,7 @@ async function handleSubscriptionDeleted(env: Env, subscription: Record<string, 
 
   // Mark for deletion
   await env.DB.prepare(
-    `UPDATE managed_instances SET status = 'deleting' WHERE id = ?`,
+    `UPDATE managed_instances SET status = 'deleting', updated_at = datetime('now') WHERE id = ?`,
   ).bind(instance.id).run()
 
   // Trigger deletion
@@ -150,7 +150,7 @@ async function handlePaymentFailed(env: Env, invoice: Record<string, unknown>) {
 
   // Suspend after payment failure
   await env.DB.prepare(
-    `UPDATE managed_instances SET status = 'suspended' WHERE stripe_subscription_id = ? AND status = 'running'`,
+    `UPDATE managed_instances SET status = 'suspended', updated_at = datetime('now') WHERE stripe_subscription_id = ? AND status = 'running'`,
   ).bind(subId).run()
 }
 
@@ -199,15 +199,15 @@ webhooks.post('/provisioner', async (c) => {
     }
 
     await c.env.DB.prepare(
-      `UPDATE managed_instances SET status = 'running', ipv4 = ?, solon_api_key_enc = ?, dashboard_url = ?, ready_at = datetime('now') WHERE id = ?`,
+      `UPDATE managed_instances SET status = 'running', ipv4 = ?, solon_api_key_enc = ?, dashboard_url = ?, ready_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
     ).bind(payload.ipv4, apiKeyEnc, payload.dashboard_url || `http://${payload.ipv4}:8420`, payload.instance_id).run()
   } else if (payload.status === 'failed') {
     await c.env.DB.prepare(
-      `UPDATE managed_instances SET status = 'failed' WHERE id = ?`,
+      `UPDATE managed_instances SET status = 'failed', updated_at = datetime('now') WHERE id = ?`,
     ).bind(payload.instance_id).run()
   } else if (payload.status === 'deleted') {
     await c.env.DB.prepare(
-      `UPDATE managed_instances SET status = 'deleted', deleted_at = datetime('now') WHERE id = ?`,
+      `UPDATE managed_instances SET status = 'deleted', deleted_at = datetime('now'), updated_at = datetime('now') WHERE id = ?`,
     ).bind(payload.instance_id).run()
   }
 

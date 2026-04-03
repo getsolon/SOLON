@@ -96,6 +96,7 @@ export interface ManagedInstanceRow {
   created_at: string
   ready_at: string | null
   deleted_at: string | null
+  updated_at: string
 }
 
 export interface JWTPayload {

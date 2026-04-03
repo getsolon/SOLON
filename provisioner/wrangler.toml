@@ -1,0 +1,18 @@
+name = "solon-provisioner"
+main = "src/index.ts"
+compatibility_date = "2024-05-29"
+
+# Deploy to a route or use workers.dev for now
+# routes = [
+#   { pattern = "provisioner.getsolon.dev/*", zone_id = "ef7817a1391e315927214ae83309f562" }
+# ]
+
+[vars]
+ENVIRONMENT = "production"
+
+# Required secrets (set via `wrangler secret put`):
+# HETZNER_API_TOKEN     - Hetzner Cloud API token
+# PROVISIONER_SECRET    - HMAC shared secret (same as cloud API's PROVISIONER_SECRET)
+# CLOUD_API_URL         - e.g. https://api.getsolon.dev
+# CLOUD_API_CALLBACK_SECRET - HMAC secret for callbacks to cloud API (same as PROVISIONER_SECRET)
+# SSH_PUBLIC_KEY        - SSH public key for server access (optional, for debugging)

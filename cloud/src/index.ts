@@ -5,6 +5,7 @@ import { AppError } from './lib/errors'
 import { authMiddleware } from './middleware/auth'
 import { requireRole } from './middleware/requireRole'
 import { rateLimitMiddleware } from './middleware/rateLimit'
+import { handleScheduled } from './scheduled'
 import authRoutes from './routes/auth'
 import profileRoutes from './routes/profile'
 import instanceRoutes from './routes/instances'
@@ -65,4 +66,9 @@ app.route('/api', authed)
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
-export default app
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(handleScheduled(env))
+  },
+} satisfies ExportedHandler<Env>

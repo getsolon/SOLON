@@ -221,6 +221,18 @@ export interface Instance {
   added_at: string
 }
 
+export interface ManagedInstance {
+  id: string
+  name: string
+  tier: 'starter' | 'pro' | 'gpu'
+  status: 'pending' | 'provisioning' | 'running' | 'suspended' | 'deleting' | 'deleted' | 'failed'
+  ipv4: string | null
+  region: string
+  dashboard_url: string | null
+  created_at: string
+  ready_at: string | null
+}
+
 export interface BillingInfo {
   plan: 'free' | 'pro' | 'team' | 'enterprise'
   status: 'active' | 'past_due' | 'canceled'
@@ -230,6 +242,7 @@ export interface BillingInfo {
     requests: { used: number; limit: number }
     team_members: { used: number; limit: number }
   }
+  managed_instances: ManagedInstance[]
   payment_method?: {
     type: string
     last4: string

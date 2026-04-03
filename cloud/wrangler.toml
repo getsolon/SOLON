@@ -19,3 +19,7 @@ migrations_dir = "migrations"
 [[kv_namespaces]]
 binding = "KV"
 id = "f35f39cf983f4330a042a78e6616e5a9"
+
+# Cron trigger for managed instance lifecycle management (every 5 minutes)
+[triggers]
+crons = ["*/5 * * * *"]

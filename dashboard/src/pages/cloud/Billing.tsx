@@ -4,13 +4,19 @@ import TopBar from '../../components/TopBar'
 import Card from '../../components/Card'
 import Badge from '../../components/Badge'
 import Button from '../../components/Button'
-import type { BillingInfo } from '../../api/types'
+import type { BillingInfo, ManagedInstance } from '../../api/types'
 
 const plans = [
   { id: 'free', name: 'Free', price: '$0', instances: 2, requests: '10K', team: false },
   { id: 'pro', name: 'Pro', price: '$19', instances: 10, requests: '100K', team: false },
   { id: 'team', name: 'Team', price: '$49', instances: 50, requests: '500K', team: true },
   { id: 'enterprise', name: 'Enterprise', price: 'Custom', instances: -1, requests: 'Unlimited', team: true },
+]
+
+const managedTiers = [
+  { id: 'starter', name: 'Starter', price: '$29', spec: '2 vCPU / 4 GB RAM (CX22)', desc: 'Good for small models and light usage' },
+  { id: 'pro', name: 'Pro', price: '$59', spec: '4 vCPU / 16 GB RAM (CX42)', desc: 'Run larger models with more headroom' },
+  { id: 'gpu', name: 'GPU', price: '$349', spec: 'Dedicated GPU (GX11)', desc: 'Full GPU inference for production workloads' },
 ]
 
 function UsageMeter({ label, used, limit }: { label: string; used: number; limit: number }) {
@@ -31,13 +37,44 @@ function UsageMeter({ label, used, limit }: { label: string; used: number; limit
   )
 }
 
+function statusBadge(status: ManagedInstance['status']) {
+  switch (status) {
+    case 'running': return <Badge variant="green">Running</Badge>
+    case 'provisioning': case 'pending': return <Badge variant="blue">Provisioning</Badge>
+    case 'suspended': return <Badge variant="red">Suspended</Badge>
+    case 'deleting': return <Badge variant="red">Deleting</Badge>
+    case 'failed': return <Badge variant="red">Failed</Badge>
+    default: return <Badge>{status}</Badge>
+  }
+}
+
 export default function Billing() {
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
 
   useEffect(() => {
     cloudAPI.getBilling().then(b => { setBilling(b); setLoading(false) })
   }, [])
+
+  const handleCheckout = async (tier: string) => {
+    setCheckoutLoading(tier)
+    try {
+      const { checkout_url } = await cloudAPI.createManagedCheckout(tier)
+      window.location.href = checkout_url
+    } catch {
+      setCheckoutLoading(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    try {
+      const { portal_url } = await cloudAPI.openBillingPortal()
+      window.location.href = portal_url
+    } catch {
+      // Portal not available (no subscription)
+    }
+  }
 
   if (loading) {
     return (
@@ -50,10 +87,13 @@ export default function Billing() {
     )
   }
 
+  const managedInstances = billing?.managed_instances ?? []
+
   return (
     <>
       <TopBar title="Billing" />
       <main className="p-4 lg:p-6 space-y-6">
+        {/* Current Plan */}
         <Card className="p-6">
           <div className="flex items-start justify-between">
             <div>
@@ -68,12 +108,85 @@ export default function Billing() {
                 )}
               </div>
             </div>
-            {billing?.plan !== 'enterprise' && (
-              <Button size="sm">Upgrade</Button>
-            )}
+            <div className="flex gap-2">
+              {managedInstances.length > 0 && (
+                <Button variant="secondary" size="sm" onClick={handlePortal}>Manage Subscription</Button>
+              )}
+              {billing?.plan !== 'enterprise' && (
+                <Button size="sm">Upgrade</Button>
+              )}
+            </div>
           </div>
         </Card>
 
+        {/* Managed Hosting Instances */}
+        {managedInstances.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Managed Servers</h3>
+            <div className="space-y-3">
+              {managedInstances.map(inst => (
+                <Card key={inst.id} className="p-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-[var(--text)]">{inst.name}</span>
+                        {statusBadge(inst.status)}
+                        <Badge>{inst.tier.toUpperCase()}</Badge>
+                      </div>
+                      <div className="mt-1 text-sm text-[var(--text-secondary)]">
+                        {inst.ipv4 && <span>{inst.ipv4}</span>}
+                        {inst.region && <span className="ml-3">{inst.region}</span>}
+                        {inst.ready_at && (
+                          <span className="ml-3">Ready since {new Date(inst.ready_at).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                    </div>
+                    {inst.status === 'running' && inst.dashboard_url && (
+                      <a
+                        href={inst.dashboard_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-brand-light hover:underline"
+                      >
+                        Open Dashboard
+                      </a>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Managed Hosting Tiers */}
+        <div>
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Managed Hosting</h3>
+          <p className="text-sm text-[var(--text-tertiary)] mb-4">
+            Launch a fully managed Solon server. We handle setup, updates, and monitoring.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {managedTiers.map(tier => (
+              <Card key={tier.id} className="p-5">
+                <h4 className="font-semibold text-[var(--text)]">{tier.name}</h4>
+                <p className="mt-1 text-2xl font-bold text-[var(--text)]">
+                  {tier.price}<span className="text-sm font-normal text-[var(--text-secondary)]">/mo</span>
+                </p>
+                <p className="mt-2 text-sm text-[var(--text-secondary)]">{tier.spec}</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">{tier.desc}</p>
+                <Button
+                  className="mt-4 w-full"
+                  size="sm"
+                  onClick={() => handleCheckout(tier.id)}
+                  disabled={checkoutLoading !== null}
+                >
+                  {checkoutLoading === tier.id ? 'Redirecting...' : 'Get Started'}
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Usage */}
         {billing?.usage && (
           <Card className="p-6">
             <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-4">Usage This Period</h3>
@@ -85,8 +198,9 @@ export default function Billing() {
           </Card>
         )}
 
+        {/* Available Plans */}
         <div>
-          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Available Plans</h3>
+          <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Instance Registry Plans</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {plans.map(plan => (
               <div
@@ -118,6 +232,7 @@ export default function Billing() {
           </div>
         </div>
 
+        {/* Payment Method */}
         {billing?.payment_method && (
           <Card className="p-6">
             <h3 className="text-sm font-medium text-[var(--text-secondary)] mb-3">Payment Method</h3>
