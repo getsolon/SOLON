@@ -24,8 +24,8 @@
     "vram": {"4b": 3.3, "9b": 5.5, "27b": 17.2},
     "sources": {
       "4b": {"repo": "bartowski/google_gemma-3-4b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-4b-Q4_K_M.gguf"},
-      "9b": {"repo": "bartowski/google_gemma-3-9b-it-GGUF", "file": "Q4_K_M"},
-      "27b": {"repo": "bartowski/google_gemma-3-27b-it-GGUF", "file": "Q4_K_M"}
+      "9b": {"repo": "bartowski/google_gemma-3-9b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-9b-Q4_K_M.gguf"},
+      "27b": {"repo": "bartowski/google_gemma-3-27b-it-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/gemma3-27b-Q4_K_M.gguf"}
     }
   },
   {
@@ -40,8 +40,8 @@
     "sources": {
       "1.5b": {"repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-1.5b-Q4_K_M.gguf"},
       "7b": {"repo": "Qwen/Qwen2.5-7B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-7b-Q4_K_M.gguf"},
-      "14b": {"repo": "Qwen/Qwen2.5-14B-Instruct-GGUF", "file": "Q4_K_M"},
-      "32b": {"repo": "Qwen/Qwen2.5-32B-Instruct-GGUF", "file": "Q4_K_M"}
+      "14b": {"repo": "Qwen/Qwen2.5-14B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-14b-Q4_K_M.gguf"},
+      "32b": {"repo": "Qwen/Qwen2.5-32B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-32b-Q4_K_M.gguf"}
     }
   },
   {
@@ -68,7 +68,7 @@
     "vram": {"mini": 2.5, "14b": 9.1},
     "sources": {
       "mini": {"repo": "bartowski/microsoft_Phi-4-mini-instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/phi4-mini-Q4_K_M.gguf"},
-      "14b": {"repo": "bartowski/phi-4-GGUF", "file": "Q4_K_M"}
+      "14b": {"repo": "bartowski/phi-4-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/phi4-14b-Q4_K_M.gguf"}
     }
   },
   {
@@ -82,10 +82,10 @@
     "vram": {"1.5b": 1.1, "7b": 4.7, "14b": 9.0, "32b": 20.0, "70b": 43.0},
     "sources": {
       "1.5b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-1.5b-Q4_K_M.gguf"},
-      "7b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF", "file": "Q4_K_M"},
+      "7b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-7b-Q4_K_M.gguf"},
       "14b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-14B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-14b-Q4_K_M.gguf"},
-      "32b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF", "file": "Q4_K_M"},
-      "70b": {"repo": "bartowski/DeepSeek-R1-Distill-Llama-70B-GGUF", "file": "Q4_K_M"}
+      "32b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-32b-Q4_K_M.gguf"},
+      "70b": {"repo": "bartowski/DeepSeek-R1-Distill-Llama-70B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-70b-Q4_K_M.gguf"}
     }
   },
   {
@@ -124,8 +124,8 @@
     "context": 128000,
     "vram": {"7b": 4.5, "35b": 20.8},
     "sources": {
-      "7b": {"repo": "bartowski/c4ai-command-r7b-12-2024-GGUF", "file": "Q4_K_M"},
-      "35b": {"repo": "bartowski/c4ai-command-r-v01-GGUF", "file": "Q4_K_M"}
+      "7b": {"repo": "bartowski/c4ai-command-r7b-12-2024-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/command-r-7b-Q4_K_M.gguf"},
+      "35b": {"repo": "bartowski/c4ai-command-r-v01-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/command-r-35b-Q4_K_M.gguf"}
     }
   },
   {
@@ -138,9 +138,9 @@
     "context": 16000,
     "vram": {"7b": 3.8, "13b": 7.4, "34b": 19.0},
     "sources": {
-      "7b": {"repo": "bartowski/CodeLlama-7b-Instruct-GGUF", "file": "Q4_K_M"},
-      "13b": {"repo": "bartowski/CodeLlama-13b-Instruct-GGUF", "file": "Q4_K_M"},
-      "34b": {"repo": "bartowski/CodeLlama-34b-Instruct-GGUF", "file": "Q4_K_M"}
+      "7b": {"repo": "bartowski/CodeLlama-7b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-7b-Q4_K_M.gguf"},
+      "13b": {"repo": "bartowski/CodeLlama-13b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-13b-Q4_K_M.gguf"},
+      "34b": {"repo": "bartowski/CodeLlama-34b-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/codellama-34b-Q4_K_M.gguf"}
     }
   },
   {
@@ -153,9 +153,9 @@
     "context": 16000,
     "vram": {"3b": 1.7, "7b": 4.0, "15b": 9.0},
     "sources": {
-      "3b": {"repo": "bartowski/starcoder2-3b-GGUF", "file": "Q4_K_M"},
-      "7b": {"repo": "bartowski/starcoder2-7b-GGUF", "file": "Q4_K_M"},
-      "15b": {"repo": "bartowski/starcoder2-15b-GGUF", "file": "Q4_K_M"}
+      "3b": {"repo": "bartowski/starcoder2-3b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-3b-Q4_K_M.gguf"},
+      "7b": {"repo": "bartowski/starcoder2-7b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-7b-Q4_K_M.gguf"},
+      "15b": {"repo": "bartowski/starcoder2-15b-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/starcoder2-15b-Q4_K_M.gguf"}
     }
   },
   {
@@ -168,7 +168,7 @@
     "context": 8192,
     "vram": {"137m": 0.3},
     "sources": {
-      "137m": {"repo": "nomic-ai/nomic-embed-text-v1.5-GGUF", "file": "Q8_0"}
+      "137m": {"repo": "nomic-ai/nomic-embed-text-v1.5-GGUF", "file": "Q8_0", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/nomic-embed-text-137m.gguf"}
     }
   },
   {
@@ -181,7 +181,7 @@
     "context": 512,
     "vram": {"335m": 0.5},
     "sources": {
-      "335m": {"repo": "mixedbread-ai/mxbai-embed-large-v1-GGUF", "file": "Q8_0"}
+      "335m": {"repo": "mixedbread-ai/mxbai-embed-large-v1-GGUF", "file": "Q8_0", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/mxbai-embed-large-335m.gguf"}
     }
   }
 ]

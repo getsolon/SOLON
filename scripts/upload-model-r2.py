@@ -76,7 +76,7 @@ def upload_file(s3, local_path, r2_key):
 def download_from_hf(repo, filename, output_dir):
     """Download a specific file from HuggingFace using curl."""
     url = f"https://huggingface.co/{repo}/resolve/main/{filename}"
-    output_path = os.path.join(output_dir, filename)
+    output_path = os.path.join(output_dir, os.path.basename(filename))
     if os.path.exists(output_path):
         print(f"Already downloaded: {output_path}")
         return output_path
