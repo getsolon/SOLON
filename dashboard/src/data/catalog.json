@@ -38,7 +38,7 @@
     "context": 128000,
     "vram": {"1.5b": 1.3, "7b": 4.7, "14b": 9.0, "32b": 20.5},
     "sources": {
-      "1.5b": {"repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "file": "Q4_K_M"},
+      "1.5b": {"repo": "Qwen/Qwen2.5-1.5B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-1.5b-Q4_K_M.gguf"},
       "7b": {"repo": "Qwen/Qwen2.5-7B-Instruct-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/qwen2.5-7b-Q4_K_M.gguf"},
       "14b": {"repo": "Qwen/Qwen2.5-14B-Instruct-GGUF", "file": "Q4_K_M"},
       "32b": {"repo": "Qwen/Qwen2.5-32B-Instruct-GGUF", "file": "Q4_K_M"}
@@ -81,7 +81,7 @@
     "context": 128000,
     "vram": {"1.5b": 1.1, "7b": 4.7, "14b": 9.0, "32b": 20.0, "70b": 43.0},
     "sources": {
-      "1.5b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "file": "Q4_K_M"},
+      "1.5b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-1.5b-Q4_K_M.gguf"},
       "7b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF", "file": "Q4_K_M"},
       "14b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-14B-GGUF", "file": "Q4_K_M", "r2_url": "https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/deepseek-r1-14b-Q4_K_M.gguf"},
       "32b": {"repo": "bartowski/DeepSeek-R1-Distill-Qwen-32B-GGUF", "file": "Q4_K_M"},
