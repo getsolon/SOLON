@@ -70,6 +70,9 @@ jobs:
           - runner: macos-latest
             goos: darwin
             goarch: arm64
+          - runner: macos-13
+            goos: darwin
+            goarch: amd64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -244,11 +247,13 @@ jobs:
 
           # Extract SHAs per platform
           DARWIN_ARM64_SHA=$(grep "solon-darwin-arm64" /tmp/checksums.txt | awk '{print $1}')
+          DARWIN_AMD64_SHA=$(grep "solon-darwin-amd64" /tmp/checksums.txt | awk '{print $1}')
           LINUX_AMD64_SHA=$(grep "solon-linux-amd64" /tmp/checksums.txt | awk '{print $1}')
           LINUX_ARM64_SHA=$(grep "solon-linux-arm64" /tmp/checksums.txt | awk '{print $1}')
 
           echo "Version: $VERSION"
           echo "Darwin ARM64 SHA: $DARWIN_ARM64_SHA"
+          echo "Darwin AMD64 SHA: $DARWIN_AMD64_SHA"
           echo "Linux AMD64 SHA: $LINUX_AMD64_SHA"
           echo "Linux ARM64 SHA: $LINUX_ARM64_SHA"
 
@@ -258,6 +263,8 @@ jobs:
           # Update SHAs — match each platform block
           # Darwin ARM64
           sed -i "/solon-darwin-arm64/{n;s/sha256 \".*\"/sha256 \"$DARWIN_ARM64_SHA\"/}" homebrew/solon.rb
+          # Darwin AMD64
+          sed -i "/solon-darwin-amd64/{n;s/sha256 \".*\"/sha256 \"$DARWIN_AMD64_SHA\"/}" homebrew/solon.rb
           # Linux ARM64
           sed -i "/solon-linux-arm64/{n;s/sha256 \".*\"/sha256 \"$LINUX_ARM64_SHA\"/}" homebrew/solon.rb
           # Linux AMD64
@@ -265,6 +272,30 @@ jobs:
 
           echo "Updated homebrew/solon.rb:"
           cat homebrew/solon.rb
+
+  smoke-test:
+    needs: build
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            artifact: solon-linux-amd64
+          - runner: macos-latest
+            artifact: solon-darwin-arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: bin/
+
+      - name: Run smoke test
+        run: |
+          chmod +x bin/solon
+          ./scripts/smoke-test.sh bin/solon
 
   test-install:
     needs: release
