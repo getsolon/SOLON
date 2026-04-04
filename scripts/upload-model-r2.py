@@ -74,15 +74,16 @@ def upload_file(s3, local_path, r2_key):
     print(f"Done: https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/{r2_key}")
 
 def download_from_hf(repo, filename, output_dir):
-    """Download a specific file from HuggingFace using curl."""
+    """Download a specific file from HuggingFace using curl with resume support."""
     url = f"https://huggingface.co/{repo}/resolve/main/{filename}"
     output_path = os.path.join(output_dir, os.path.basename(filename))
-    if os.path.exists(output_path) and os.path.getsize(output_path) > 1000:
-        print(f"Already downloaded: {output_path}")
-        return output_path
-    # Remove any previous failed download (error pages are tiny)
-    if os.path.exists(output_path):
+    # Remove tiny error pages from previous failed attempts
+    if os.path.exists(output_path) and os.path.getsize(output_path) <= 1000:
         os.remove(output_path)
+    # Always run curl with -C - (resume). It will:
+    # - Skip if the file is already complete (same size as Content-Length)
+    # - Resume from where it left off if the file is partial
+    # - Download from scratch if no file exists
     print(f"Downloading {url}...")
     cmd = ["curl", "-L", "-o", output_path, "--progress-bar", "-f", "--retry", "5", "--retry-delay", "3", "-C", "-", url]
     hf_token = os.environ.get("HF_TOKEN")
