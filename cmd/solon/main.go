@@ -249,6 +249,7 @@ func modelsCmd() *cobra.Command {
 		modelsInfoCmd(),
 		modelsAddCmd(),
 		modelsKnownCmd(),
+		modelsSearchCmd(),
 	)
 
 	return cmd
@@ -490,6 +491,59 @@ func modelsKnownCmd() *cobra.Command {
 			return nil
 		},
 	}
+}
+
+func modelsSearchCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "search [query]",
+		Short: "Search available models by name, category, or capability",
+		Long:  "Search the model catalog. Examples: 'solon models search code', 'solon models search embedding', 'solon models search llama'.",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			query := strings.ToLower(args[0])
+			catalog := models.GetCatalog()
+
+			var matches []models.CatalogModel
+			for _, m := range catalog {
+				if matchesQuery(m, query) {
+					matches = append(matches, m)
+				}
+			}
+
+			if len(matches) == 0 {
+				fmt.Printf("No models matching %q. Try: chat, code, embedding, reasoning, vision\n", args[0])
+				return nil
+			}
+
+			for _, m := range matches {
+				sizes := strings.Join(m.Sizes, ", ")
+				caps := strings.Join(m.Capabilities, ", ")
+				fmt.Printf("%-18s %-10s %-8s %-30s %s\n", m.Name, m.Category, sizes, caps, m.Description)
+			}
+			return nil
+		},
+	}
+}
+
+func matchesQuery(m models.CatalogModel, query string) bool {
+	if strings.Contains(strings.ToLower(m.Name), query) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(m.Category), query) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(m.Description), query) {
+		return true
+	}
+	if strings.Contains(strings.ToLower(m.Creator), query) {
+		return true
+	}
+	for _, cap := range m.Capabilities {
+		if strings.Contains(strings.ToLower(cap), query) {
+			return true
+		}
+	}
+	return false
 }
 
 func keysCmd() *cobra.Command {
