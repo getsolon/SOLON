@@ -84,6 +84,13 @@ func (r *Registry) Pull(ctx context.Context, name string, progressFn func(event 
 
 	blobsDir := filepath.Join(r.modelsDir, "blobs")
 
+	// Pre-flight: check disk space before starting a large download
+	if estimatedGB := estimateModelSize(name); estimatedGB > 0 {
+		if err := checkDiskSpace(blobsDir, estimatedGB); err != nil {
+			return err
+		}
+	}
+
 	// Try R2 mirror first
 	var result *DownloadResult
 	if source.R2URL != "" {
