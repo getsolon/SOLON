@@ -64,6 +64,30 @@ func DefaultModelsFromCatalog() map[string]ModelSource {
 	return models
 }
 
+// LookupCatalogModel finds a model in the catalog by name and optional size.
+// Returns the model and size if found.
+func LookupCatalogModel(name string) (*CatalogModel, string) {
+	modelName, size := splitNameSize(name)
+	for i, m := range GetCatalog() {
+		if m.Name == modelName {
+			if size == "" && len(m.Sizes) > 0 {
+				size = m.Sizes[0]
+			}
+			return &GetCatalog()[i], size
+		}
+	}
+	return nil, ""
+}
+
+func splitNameSize(name string) (string, string) {
+	for i := len(name) - 1; i >= 0; i-- {
+		if name[i] == ':' {
+			return name[:i], name[i+1:]
+		}
+	}
+	return name, ""
+}
+
 // RefreshCatalogFromRemote optionally fetches an updated catalog from a remote URL.
 // Falls back to embedded catalog on any error.
 func RefreshCatalogFromRemote(url string) {

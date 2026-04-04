@@ -67,6 +67,24 @@ func TestGetCatalogCategories(t *testing.T) {
 	}
 }
 
+func TestLookupCatalogModel(t *testing.T) {
+	// Lookup with size
+	m, size := LookupCatalogModel("llama3.2:3b")
+	require.NotNil(t, m)
+	assert.Equal(t, "llama3.2", m.Name)
+	assert.Equal(t, "3b", size)
+
+	// Lookup without size defaults to first size
+	m, size = LookupCatalogModel("qwen2.5")
+	require.NotNil(t, m)
+	assert.Equal(t, "qwen2.5", m.Name)
+	assert.NotEmpty(t, size)
+
+	// Unknown model
+	m, _ = LookupCatalogModel("nonexistent:7b")
+	assert.Nil(t, m)
+}
+
 func TestDefaultModelsFromCatalog(t *testing.T) {
 	models := DefaultModelsFromCatalog()
 	require.NotEmpty(t, models, "default models should not be empty")

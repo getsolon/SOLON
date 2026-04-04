@@ -379,9 +379,29 @@ func modelsRemoveCmd() *cobra.Command {
 func modelsInfoCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "info [model]",
-		Short: "Show detailed information about an installed model",
+		Short: "Show detailed information about a model",
+		Long:  "Show catalog information (description, VRAM, capabilities) and local install status for any model.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+
+			// Show catalog info if available
+			catalogModel, size := models.LookupCatalogModel(name)
+			if catalogModel != nil {
+				fmt.Printf("Name:         %s\n", catalogModel.Name)
+				fmt.Printf("Description:  %s\n", catalogModel.Description)
+				fmt.Printf("Creator:      %s\n", catalogModel.Creator)
+				fmt.Printf("Category:     %s\n", catalogModel.Category)
+				fmt.Printf("Capabilities: %s\n", strings.Join(catalogModel.Capabilities, ", "))
+				fmt.Printf("Context:      %dk tokens\n", catalogModel.Context/1000)
+				fmt.Printf("Sizes:        %s\n", strings.Join(catalogModel.Sizes, ", "))
+				if vram, ok := catalogModel.VRAM[size]; ok {
+					fmt.Printf("VRAM (%s):    %.1f GB\n", size, vram)
+				}
+				fmt.Println()
+			}
+
+			// Show local install info
 			dataDir, err := models.DataDir()
 			if err != nil {
 				return fmt.Errorf("getting data dir: %w", err)
@@ -392,13 +412,15 @@ func modelsInfoCmd() *cobra.Command {
 				return fmt.Errorf("initializing registry: %w", err)
 			}
 
-			path, err := reg.Resolve(args[0])
+			path, err := reg.Resolve(name)
 			if err != nil {
-				return fmt.Errorf("model %q not found locally", args[0])
+				fmt.Println("Status:       not installed")
+				fmt.Printf("\nRun 'solon models pull %s' to download.\n", name)
+				return nil
 			}
 
 			info, statErr := os.Stat(path)
-			fmt.Printf("Name:         %s\n", args[0])
+			fmt.Println("Status:       installed")
 			if statErr == nil {
 				fmt.Printf("Size:         %s\n", formatSize(info.Size()))
 				fmt.Printf("Path:         %s\n", path)
