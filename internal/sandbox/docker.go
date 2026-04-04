@@ -417,6 +417,38 @@ func (d *dockerClient) containerStats(ctx context.Context, id string) (*containe
 	}, nil
 }
 
+// imagePull pulls a Docker image from a registry. It blocks until the pull is complete.
+func (d *dockerClient) imagePull(ctx context.Context, image string) error {
+	// Docker API: POST /images/create?fromImage=<image>
+	path := "/images/create?fromImage=" + image
+	resp, err := d.do(ctx, "POST", path, nil)
+	if err != nil {
+		return fmt.Errorf("pulling image %s: %w", image, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("pulling image %s: status %d: %s", image, resp.StatusCode, string(body))
+	}
+
+	// Drain the response body (Docker streams pull progress as JSON lines)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	return nil
+}
+
+// imageExists checks whether an image is available locally.
+func (d *dockerClient) imageExists(ctx context.Context, image string) bool {
+	// URL-encode the image name (slashes become %2F)
+	encoded := strings.ReplaceAll(image, "/", "%2F")
+	resp, err := d.do(ctx, "GET", "/images/"+encoded+"/json", nil)
+	if err != nil {
+		return false
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode == http.StatusOK
+}
+
 // --- Types for Docker API ---
 
 type containerConfig struct {

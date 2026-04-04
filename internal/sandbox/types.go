@@ -55,6 +55,12 @@ const DefaultImage = "node:22-slim"
 // SandboxImage is the Playwright-ready image for Tier 2+ sandboxes.
 const SandboxImage = "solon/sandbox:latest"
 
+// GHCR images — pre-built versions pulled from GitHub Container Registry.
+const (
+	GHCRSandboxImage  = "ghcr.io/theodorthirtyseven37/solon-sandbox:latest"
+	GHCROpenClawImage = "ghcr.io/theodorthirtyseven37/solon-openclaw:latest"
+)
+
 // Docker labels used to identify Solon-managed sandbox containers.
 const (
 	LabelManaged   = "solon.sandbox"

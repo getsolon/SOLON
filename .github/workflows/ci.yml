@@ -119,6 +119,45 @@ jobs:
           name: solon-${{ matrix.goos }}-${{ matrix.goarch }}
           path: bin/solon
 
+  docker-images:
+    needs: test
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push sandbox image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/sandbox.Dockerfile
+          push: true
+          tags: |
+            ghcr.io/theodorthirtyseven37/solon-sandbox:latest
+            ghcr.io/theodorthirtyseven37/solon-sandbox:${{ github.sha }}
+
+      - name: Build and push openclaw image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/openclaw.Dockerfile
+          push: true
+          build-args: |
+            BASE_IMAGE=ghcr.io/theodorthirtyseven37/solon-sandbox:latest
+          tags: |
+            ghcr.io/theodorthirtyseven37/solon-openclaw:latest
+            ghcr.io/theodorthirtyseven37/solon-openclaw:${{ github.sha }}
+
   website:
     needs: test
     if: github.ref == 'refs/heads/master'

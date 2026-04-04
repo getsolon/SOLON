@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -64,21 +65,36 @@ func (m *Manager) EnsureTierNetworks(ctx context.Context) error {
 	return nil
 }
 
-// EnsureSandboxImage builds the Playwright-ready sandbox base image if it doesn't exist.
-// The image is built from node:22-slim with Chromium and Playwright pre-installed.
+// EnsureSandboxImage ensures the Playwright-ready sandbox image is available.
+// It first tries to pull from GHCR, then falls back to building locally.
 func (m *Manager) EnsureSandboxImage(ctx context.Context) error {
-	// Check if image already exists
-	resp, _ := m.docker.do(ctx, "GET", "/images/solon%2Fsandbox:latest/json", nil)
-	if resp != nil {
-		_ = resp.Body.Close()
-		if resp.StatusCode == 200 {
-			return nil
-		}
+	// Check if image already exists locally
+	if m.docker.imageExists(ctx, SandboxImage) {
+		return nil
 	}
 
+	// Try pulling pre-built image from GHCR
+	log.Println("[sandbox] Pulling sandbox image from GHCR...")
+	if err := m.docker.imagePull(ctx, GHCRSandboxImage); err == nil {
+		// Tag as local name for compatibility
+		tagResp, tagErr := m.docker.do(ctx, "POST",
+			"/images/"+strings.ReplaceAll(GHCRSandboxImage, "/", "%2F")+"/tag?repo=solon/sandbox&tag=latest", nil)
+		if tagErr == nil {
+			_ = tagResp.Body.Close()
+		}
+		log.Println("[sandbox] Image pulled from GHCR: solon/sandbox:latest")
+		return nil
+	}
+	log.Println("[sandbox] GHCR pull failed, building locally...")
+
+	// Fallback: build locally
+	return m.buildSandboxImageLocally(ctx)
+}
+
+// buildSandboxImageLocally builds the sandbox image from scratch using Docker exec + commit.
+func (m *Manager) buildSandboxImageLocally(ctx context.Context) error {
 	log.Println("[sandbox] Building sandbox image with Chromium + Playwright (this takes ~60s)...")
 
-	// Create temp container from node:22-slim
 	tmpID, err := m.docker.containerCreate(ctx, containerConfig{
 		Name: "solon-sandbox-build-tmp",
 		Body: map[string]any{
@@ -100,7 +116,6 @@ func (m *Manager) EnsureSandboxImage(ctx context.Context) error {
 		return fmt.Errorf("starting build container: %w", err)
 	}
 
-	// Install Chromium and system dependencies
 	installCmd := []string{"sh", "-c",
 		"apt-get update && apt-get install -y --no-install-recommends " +
 			"chromium fonts-liberation libgbm1 libnss3 libxss1 libasound2 " +
@@ -112,7 +127,6 @@ func (m *Manager) EnsureSandboxImage(ctx context.Context) error {
 		return fmt.Errorf("installing chromium dependencies: %w", err)
 	}
 
-	// Install Playwright and its bundled Chromium
 	_, err = m.docker.containerExec(ctx, tmpID,
 		[]string{"npm", "install", "-g", "playwright"},
 		nil,
@@ -122,13 +136,11 @@ func (m *Manager) EnsureSandboxImage(ctx context.Context) error {
 		return fmt.Errorf("installing playwright: %w", err)
 	}
 
-	// Set Chromium path for Playwright (use system chromium)
 	_, _ = m.docker.containerExec(ctx, tmpID,
 		[]string{"sh", "-c", "echo 'export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium' >> /etc/profile.d/playwright.sh"},
 		nil,
 	)
 
-	// Commit as image
 	commitResp, err := m.docker.do(ctx, "POST",
 		"/commit?container="+tmpID+"&repo=solon/sandbox&tag=latest&pause=true",
 		nil,
@@ -497,77 +509,71 @@ func (m *Manager) EnsureOpenClaw(ctx context.Context, providerKey string) (*Open
 		log.Printf("[openclaw] Warning: sandbox image build failed, falling back to %s: %v", DefaultImage, err)
 	}
 
-	// Check if OpenClaw image already exists
-	imgResp, _ := m.docker.do(ctx, "GET", "/images/"+imageTag+"/json", nil)
-	needsBuild := true
-	if imgResp != nil {
-		_ = imgResp.Body.Close()
-		if imgResp.StatusCode == 200 {
-			needsBuild = false
-			log.Println("[openclaw] Image exists, skipping build")
-		}
-	}
+	// Check if OpenClaw image already exists locally
+	if !m.docker.imageExists(ctx, imageTag) {
+		// Try pulling pre-built image from GHCR
+		log.Println("[openclaw] Pulling OpenClaw image from GHCR...")
+		if err := m.docker.imagePull(ctx, GHCROpenClawImage); err == nil {
+			// Tag as local name
+			tagResp, tagErr := m.docker.do(ctx, "POST",
+				"/images/"+strings.ReplaceAll(GHCROpenClawImage, "/", "%2F")+"/tag?repo=solon/openclaw&tag=latest", nil)
+			if tagErr == nil {
+				_ = tagResp.Body.Close()
+			}
+			log.Println("[openclaw] Image pulled from GHCR: solon/openclaw:latest")
+		} else {
+			log.Printf("[openclaw] GHCR pull failed (%v), building locally...", err)
 
-	if needsBuild {
-		log.Println("[openclaw] Installing OpenClaw into image (this takes ~30s)...")
-
-		// Use sandbox image (Playwright-ready) as base if available, else fall back
-		baseImage := SandboxImage
-		checkResp, _ := m.docker.do(ctx, "GET", "/images/solon%2Fsandbox:latest/json", nil)
-		if checkResp != nil {
-			_ = checkResp.Body.Close()
-			if checkResp.StatusCode != 200 {
+			// Fallback: build locally
+			baseImage := SandboxImage
+			if !m.docker.imageExists(ctx, SandboxImage) {
 				baseImage = DefaultImage
 			}
-		}
 
-		// Create a temp container to install OpenClaw
-		tmpID, err := m.docker.containerCreate(ctx, containerConfig{
-			Name: "openclaw-build-tmp",
-			Body: map[string]any{
-				"Image": baseImage,
-				"Cmd":   []string{"sleep", "infinity"},
-			},
-		})
-		if err != nil {
-			return nil, fmt.Errorf("creating build container: %w", err)
-		}
+			tmpID, err := m.docker.containerCreate(ctx, containerConfig{
+				Name: "openclaw-build-tmp",
+				Body: map[string]any{
+					"Image": baseImage,
+					"Cmd":   []string{"sleep", "infinity"},
+				},
+			})
+			if err != nil {
+				return nil, fmt.Errorf("creating build container: %w", err)
+			}
 
-		if err := m.docker.containerStart(ctx, tmpID); err != nil {
+			if err := m.docker.containerStart(ctx, tmpID); err != nil {
+				_ = m.docker.containerRemove(ctx, tmpID)
+				return nil, fmt.Errorf("starting build container: %w", err)
+			}
+
+			_, err = m.docker.containerExec(ctx, tmpID, []string{"npm", "install", "-g", "openclaw"}, nil)
+			if err != nil {
+				_ = m.docker.containerRemove(ctx, tmpID)
+				return nil, fmt.Errorf("installing openclaw: %w", err)
+			}
+
+			openclawCfg := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
+			_, _ = m.docker.containerExec(ctx, tmpID,
+				[]string{"sh", "-c", "mkdir -p /root/.openclaw && printf '%s' '" + openclawCfg + "' > /root/.openclaw/openclaw.json"},
+				nil,
+			)
+
+			commitResp, err := m.docker.do(ctx, "POST",
+				fmt.Sprintf("/commit?container=%s&repo=solon/openclaw&tag=latest&pause=true", tmpID),
+				nil,
+			)
+			if err != nil {
+				_ = m.docker.containerRemove(ctx, tmpID)
+				return nil, fmt.Errorf("committing openclaw image: %w", err)
+			}
+			_ = commitResp.Body.Close()
+
+			_ = m.docker.containerStop(ctx, tmpID, 2)
 			_ = m.docker.containerRemove(ctx, tmpID)
-			return nil, fmt.Errorf("starting build container: %w", err)
+			log.Println("[openclaw] Image built locally: solon/openclaw:latest")
 		}
-
-		// Install OpenClaw
-		_, err = m.docker.containerExec(ctx, tmpID, []string{"npm", "install", "-g", "openclaw"}, nil)
-		if err != nil {
-			_ = m.docker.containerRemove(ctx, tmpID)
-			return nil, fmt.Errorf("installing openclaw: %w", err)
-		}
-
-		// Write OpenClaw config
-		openclawCfg := `{"gateway":{"auth":{"mode":"token","token":"solon-openclaw-token"}}}`
-		_, _ = m.docker.containerExec(ctx, tmpID,
-			[]string{"sh", "-c", "mkdir -p /root/.openclaw && printf '%s' '" + openclawCfg + "' > /root/.openclaw/openclaw.json"},
-			nil,
-		)
-
-		// Commit as image
-		commitResp, err := m.docker.do(ctx, "POST",
-			fmt.Sprintf("/commit?container=%s&repo=solon/openclaw&tag=latest&pause=true", tmpID),
-			nil,
-		)
-		if err != nil {
-			_ = m.docker.containerRemove(ctx, tmpID)
-			return nil, fmt.Errorf("committing openclaw image: %w", err)
-		}
-		_ = commitResp.Body.Close()
-
-		// Clean up build container
-		_ = m.docker.containerStop(ctx, tmpID, 2)
-		_ = m.docker.containerRemove(ctx, tmpID)
-
-		log.Println("[openclaw] Image built: solon/openclaw:latest")
+	} else {
+		log.Println("[openclaw] Image exists, skipping build")
 	}
 
 	// Step 2: Remove any existing openclaw sandbox container
