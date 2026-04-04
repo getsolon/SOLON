@@ -50,6 +50,7 @@ solon serve                         Start the server
 solon models pull <model>           Download a model
 solon models list                   List installed models
 solon models info <model>           Show model details
+solon models search <query>         Search models by name/category/capability
 solon models remove <model>         Remove a model
 solon keys create --name <name>     Create a user-scoped API key
 solon keys create --name <n> --scope admin  Create an admin API key
