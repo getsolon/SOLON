@@ -4,6 +4,7 @@
 import os
 import sys
 import subprocess
+import time
 import boto3
 
 R2_ENDPOINT = "https://e8ac4eb5225e608e3a5a10015cce94fa.eu.r2.cloudflarestorage.com"
@@ -61,17 +62,40 @@ def get_s3_client():
         region_name="auto",
     )
 
-def upload_file(s3, local_path, r2_key):
+def upload_file(s3, local_path, r2_key, max_retries=10):
     size = os.path.getsize(local_path)
     print(f"Uploading {r2_key} ({size / 1e9:.1f} GB)...")
-    s3.upload_file(local_path, R2_BUCKET, r2_key,
-        Callback=lambda bytes_transferred: None,
-        Config=boto3.s3.transfer.TransferConfig(
-            multipart_threshold=256 * 1024 * 1024,
-            multipart_chunksize=256 * 1024 * 1024,
-        ),
+    # Use smaller chunks for more resilient multipart uploads
+    chunk_size = 64 * 1024 * 1024  # 64 MB chunks (smaller = less wasted on failure)
+    config = boto3.s3.transfer.TransferConfig(
+        multipart_threshold=64 * 1024 * 1024,
+        multipart_chunksize=chunk_size,
+        max_concurrency=2,  # Reduce concurrent parts to avoid overwhelming connection
     )
-    print(f"Done: https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/{r2_key}")
+    for attempt in range(1, max_retries + 1):
+        try:
+            s3.upload_file(local_path, R2_BUCKET, r2_key,
+                Callback=lambda bytes_transferred: None,
+                Config=config,
+            )
+            # Verify the upload size matches
+            head = s3.head_object(Bucket=R2_BUCKET, Key=r2_key)
+            remote_size = head['ContentLength']
+            if remote_size != size:
+                print(f"WARNING: Size mismatch! Local={size}, Remote={remote_size}. Retrying...")
+                s3.delete_object(Bucket=R2_BUCKET, Key=r2_key)
+                raise Exception(f"Size mismatch: {remote_size} != {size}")
+            print(f"Done: https://pub-ceabcf6fa0bd445f944e5343aab8cd05.r2.dev/{r2_key}")
+            return
+        except Exception as e:
+            wait = min(30 * attempt, 180)  # 30s, 60s, 90s, ... up to 180s
+            print(f"Upload attempt {attempt}/{max_retries} failed: {e}")
+            if attempt < max_retries:
+                print(f"Retrying in {wait}s...")
+                time.sleep(wait)
+            else:
+                print(f"FAILED after {max_retries} attempts: {r2_key}")
+                raise
 
 def download_from_hf(repo, filename, output_dir):
     """Download a specific file from HuggingFace using curl with resume support."""
