@@ -32,22 +32,9 @@ type DownloadResult struct {
 }
 
 // DownloadFromURL downloads a GGUF file from a direct URL (e.g. R2 mirror).
+// Supports HTTP range-based resume: if a partial .download file exists, it
+// continues from where it left off. Retries up to 3 times on connection errors.
 func DownloadFromURL(ctx context.Context, url, blobsDir string, progressFn func(DownloadProgress)) (*DownloadResult, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("downloading from mirror: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("mirror returned %d", resp.StatusCode)
-	}
-
 	// Extract filename from URL
 	parts := strings.Split(url, "/")
 	filename := parts[len(parts)-1]
@@ -56,30 +43,119 @@ func DownloadFromURL(ctx context.Context, url, blobsDir string, progressFn func(
 	}
 
 	tmpPath := filepath.Join(blobsDir, ".download-"+filename)
-	out, err := os.Create(tmpPath)
-	if err != nil {
-		return nil, fmt.Errorf("creating temp file: %w", err)
-	}
-	defer func() { _ = os.Remove(tmpPath) }()
 
-	total := resp.ContentLength
+	const maxRetries = 3
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		result, err := downloadWithResume(ctx, url, filename, tmpPath, blobsDir, progressFn)
+		if err == nil {
+			return result, nil
+		}
+
+		// Only retry on connection/read errors, not on HTTP errors or context cancellation
+		if ctx.Err() != nil {
+			_ = os.Remove(tmpPath)
+			return nil, ctx.Err()
+		}
+		if attempt < maxRetries && isRetryableError(err) {
+			if progressFn != nil {
+				progressFn(DownloadProgress{
+					Event:   "progress",
+					File:    filename,
+					Message: fmt.Sprintf("connection error, retrying (%d/%d)...", attempt+1, maxRetries),
+				})
+			}
+			continue
+		}
+		_ = os.Remove(tmpPath)
+		return nil, err
+	}
+
+	_ = os.Remove(tmpPath)
+	return nil, fmt.Errorf("download failed after %d retries", maxRetries)
+}
+
+// isRetryableError returns true for network/connection errors that are safe to retry.
+func isRetryableError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "reading response:") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "broken pipe") ||
+		strings.Contains(msg, "unexpected EOF")
+}
+
+// downloadWithResume performs a single download attempt with range-resume support.
+func downloadWithResume(ctx context.Context, url, filename, tmpPath, blobsDir string, progressFn func(DownloadProgress)) (*DownloadResult, error) {
+	// Check for existing partial download
+	var existingSize int64
+	if info, err := os.Stat(tmpPath); err == nil {
+		existingSize = info.Size()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	if existingSize > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", existingSize))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("downloading from mirror: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	switch resp.StatusCode {
+	case 200:
+		// Full response — start from scratch
+		existingSize = 0
+	case 206:
+		// Partial content — resume supported
+	case 416:
+		// Range not satisfiable — file might already be complete
+		// Fall through to hash verification below
+		existingSize = 0
+	default:
+		return nil, fmt.Errorf("mirror returned %d", resp.StatusCode)
+	}
+
+	var total int64
+	if resp.StatusCode == 200 {
+		total = resp.ContentLength
+	} else if resp.StatusCode == 206 {
+		total = existingSize + resp.ContentLength
+	}
 
 	if progressFn != nil {
-		progressFn(DownloadProgress{Event: "start", File: filename, Total: total})
+		msg := "downloading from Solon mirror"
+		if existingSize > 0 {
+			msg = fmt.Sprintf("resuming download from %.1f MB", float64(existingSize)/1e6)
+		}
+		progressFn(DownloadProgress{Event: "start", File: filename, Total: total, Message: msg})
 	}
 
-	h := sha256.New()
-	var downloaded int64
+	// Open file for writing (append if resuming, create if new)
+	var out *os.File
+	if existingSize > 0 && resp.StatusCode == 206 {
+		out, err = os.OpenFile(tmpPath, os.O_WRONLY|os.O_APPEND, 0644)
+	} else {
+		out, err = os.Create(tmpPath)
+		existingSize = 0
+	}
+	if err != nil {
+		return nil, fmt.Errorf("opening temp file: %w", err)
+	}
+
+	downloaded := existingSize
 	buf := make([]byte, 256*1024) // 256KB chunks
 
 	for {
 		n, readErr := resp.Body.Read(buf)
 		if n > 0 {
-			if _, err := out.Write(buf[:n]); err != nil {
+			if _, writeErr := out.Write(buf[:n]); writeErr != nil {
 				_ = out.Close()
-				return nil, fmt.Errorf("writing file: %w", err)
+				return nil, fmt.Errorf("writing file: %w", writeErr)
 			}
-			_, _ = h.Write(buf[:n])
 			downloaded += int64(n)
 
 			if progressFn != nil && total > 0 {
@@ -102,7 +178,12 @@ func DownloadFromURL(ctx context.Context, url, blobsDir string, progressFn func(
 	}
 	_ = out.Close()
 
-	hash := fmt.Sprintf("%x", h.Sum(nil))
+	// Compute SHA256 of the complete file
+	hash, err := fileSHA256(tmpPath)
+	if err != nil {
+		return nil, fmt.Errorf("computing SHA256: %w", err)
+	}
+
 	blobName := fmt.Sprintf("sha256-%s.gguf", hash[:16])
 	blobPath := filepath.Join(blobsDir, blobName)
 	_ = os.Remove(blobPath)

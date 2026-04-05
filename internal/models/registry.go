@@ -94,14 +94,15 @@ func (r *Registry) Pull(ctx context.Context, name string, progressFn func(event 
 	// Try R2 mirror first
 	var result *DownloadResult
 	if source.R2URL != "" {
-		if progressFn != nil {
-			progressFn(DownloadProgress{Event: "start", Message: "downloading from Solon mirror"})
-		}
 		r2Result, r2Err := DownloadFromURL(ctx, source.R2URL, blobsDir, progressFn)
 		if r2Err == nil {
 			result = r2Result
+		} else if progressFn != nil {
+			progressFn(DownloadProgress{
+				Event:   "progress",
+				Message: fmt.Sprintf("mirror unavailable (%v), falling back to HuggingFace", r2Err),
+			})
 		}
-		// If R2 failed, result stays nil → falls through to HuggingFace
 	}
 
 	// Fall back to HuggingFace
