@@ -120,9 +120,10 @@ func downloadWithResume(ctx context.Context, url, filename, tmpPath, blobsDir st
 	}
 
 	var total int64
-	if resp.StatusCode == 200 {
+	switch resp.StatusCode {
+	case 200:
 		total = resp.ContentLength
-	} else if resp.StatusCode == 206 {
+	case 206:
 		total = existingSize + resp.ContentLength
 	}
 

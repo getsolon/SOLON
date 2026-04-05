@@ -157,11 +157,12 @@ func TestRegistryPullAndResolve(t *testing.T) {
 	require.NoError(t, err)
 
 	// Add a custom mapping pointing to our test server
-	r.AddCustomMapping("test-model:tiny", ModelSource{
+	err = r.AddCustomMapping("test-model:tiny", ModelSource{
 		Repo:  "test/model",
 		File:  "Q4_K_M",
 		R2URL: server.URL + "/test-model.gguf",
 	})
+	require.NoError(t, err)
 
 	// Pull the model
 	var events []DownloadProgress
