@@ -5,7 +5,11 @@ import os
 import sys
 import subprocess
 import time
+import functools
 import boto3
+
+# Unbuffered print for piped output
+print = functools.partial(print, flush=True)
 
 R2_ENDPOINT = "https://e8ac4eb5225e608e3a5a10015cce94fa.eu.r2.cloudflarestorage.com"
 R2_BUCKET = "solon-models"
