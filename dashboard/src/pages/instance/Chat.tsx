@@ -20,6 +20,8 @@ export default function Chat() {
   const [models, setModels] = useState<ModelInfo[]>([])
   const [selectedModel, setSelectedModel] = useState('')
   const [sending, setSending] = useState(false)
+  const [starting, setStarting] = useState(false)
+  const [dockerAvailable, setDockerAvailable] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -33,6 +35,7 @@ export default function Chat() {
 
     try {
       const status = await fetchJSON<{ available: boolean; running: boolean }>('/api/v1/openclaw/status')
+      setDockerAvailable(status.available !== false)
       if (status.running) {
         setMode('agent')
         return
@@ -49,6 +52,26 @@ export default function Chat() {
       setMode('disconnected')
     }
   }, [selectedModel])
+
+  async function handleStartAgent() {
+    setStarting(true)
+    setError('')
+    try {
+      await fetch('/api/v1/openclaw/start', { method: 'POST' }).then(async r => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: r.statusText })) as { error?: string }
+          throw new Error(err.error || `HTTP ${r.status}`)
+        }
+      })
+      // Wait briefly for container to be ready, then reconnect
+      await new Promise(resolve => setTimeout(resolve, 3000))
+      await connect()
+    } catch (e) {
+      setError((e as Error).message)
+    } finally {
+      setStarting(false)
+    }
+  }
 
   useEffect(() => { connect() }, [])
 
@@ -217,6 +240,13 @@ export default function Chat() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {mode !== 'agent' && dockerAvailable && !starting && (
+            <button onClick={handleStartAgent}
+              className="text-xs px-3 py-1 rounded-md bg-green-600 text-white hover:bg-green-500 transition-colors">
+              Start Agent
+            </button>
+          )}
+          {starting && <span className="text-xs text-yellow-400 animate-pulse">Starting agent...</span>}
           {mode === 'disconnected' && <button onClick={connect} className="text-xs text-[var(--accent)] hover:underline">Reconnect</button>}
           {messages.length > 0 && <button onClick={() => setMessages([])} className="text-xs text-[var(--text-tertiary)] hover:text-[var(--text)]">Clear</button>}
         </div>
@@ -236,9 +266,28 @@ export default function Chat() {
             <div className="text-center max-w-sm">
               <p className="text-4xl mb-4">&#x1F99E;</p>
               <p className="text-[var(--text-secondary)] text-sm">
-                {mode === 'agent' ? 'Connected to OpenClaw agent. Type a message to start.' : 'Type a message to chat with your AI model.'}
+                {mode === 'agent' ? 'Connected to OpenClaw agent. Type a message to start.' :
+                 starting ? 'Setting up your agent environment...' :
+                 'Type a message to chat with your AI model.'}
               </p>
-              {mode === 'direct' && <p className="text-xs text-[var(--text-tertiary)] mt-2">Start OpenClaw for the full agent experience with tools and code execution.</p>}
+              {mode !== 'agent' && !starting && dockerAvailable && (
+                <button onClick={handleStartAgent}
+                  className="mt-3 px-4 py-2 rounded-lg text-sm font-medium bg-green-600 text-white hover:bg-green-500 transition-colors">
+                  Launch OpenClaw Agent
+                </button>
+              )}
+              {mode !== 'agent' && !starting && dockerAvailable && (
+                <p className="text-xs text-[var(--text-tertiary)] mt-2">Full agent with tools, code execution, and web browsing.</p>
+              )}
+              {!dockerAvailable && mode !== 'agent' && (
+                <p className="text-xs text-[var(--text-tertiary)] mt-2">Install Docker to enable the full agent experience.</p>
+              )}
+              {starting && (
+                <div className="mt-3 flex items-center gap-2 text-yellow-400 text-sm">
+                  <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                  Pulling image and starting container... This may take a minute on first run.
+                </div>
+              )}
             </div>
           </div>
         ) : (
